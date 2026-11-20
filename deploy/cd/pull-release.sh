@@ -25,7 +25,9 @@ git -C source.git archive "$sha" | tar -x -C "$tmp"
 # Keep host-owned Compose, reverse proxy, keys and persistent volume unchanged.
 compose=(docker compose -p jobevent --project-directory "$JOBEVENT_STACK_DIR" -f "$JOBEVENT_STACK_DIR/compose.yaml" -f "$JOBEVENT_STACK_DIR/shared.yaml")
 candidate=jobevent:cd-candidate
-if ! docker build --build-arg "JOBEVENT_REVISION=$sha" -t "$candidate" "$tmp"; then
+if ! if ! docker build --build-arg "JOBEVENT_REVISION=$sha" -t "$candidate" "$tmp"; then
+  echo "$sha" > failed; echo "Candidate build failed; previous release remains active." >&2; exit 1
+fi; then
   echo "$sha" > failed; echo "Candidate build failed; previous release remains active." >&2; exit 1
 fi
 printf 'services:\n  web:\n    image: %s\n' "$candidate" > "$tmp/preflight.yaml"
