@@ -17,3 +17,11 @@
 GitHub 저장소 권한은 서비스 회원 권한과 무관합니다. 개발자 초대는 유지보수자가 GitHub에서 별도로 처리합니다.
 
 실제 브라우저에서 로그인·자료 보관·방 생성/복제·모바일 탐색을 회귀 검사하려면 Chrome이 있는 환경에서 `uv run --with playwright==1.65.2 python checks/browser.py`를 실행하세요. 임시 로컬 DB만 쓰며 외부 AI·채널을 호출하지 않습니다. `--screenshots docs`는 README의 화면 자료를 갱신합니다.
+
+## 두 명이 변경을 릴리스하는 순서
+
+1. 최신 `main`에서 작업 브랜치를 만듭니다: `git switch main && git pull --ff-only && git switch -c feat/변경이름`.
+2. PR을 올리고 다른 개발자에게 리뷰를 요청합니다. 코드뿐 아니라 데이터 삭제·외부 발송·API 비용 변화도 확인합니다. 실제 고객 자료와 비밀키는 리뷰에도 사용하지 않습니다. 보안 신고는 [비공개 절차](SECURITY.md)를 따릅니다.
+3. 상대방의 승인과 필수 검사 `test (3.11)`, `test (3.12)`, `container`가 끝나면 squash merge합니다. 새 커밋 후에는 최신 diff를 다시 검토합니다. 실패한 검사를 우회하지 않습니다.
+4. `main`의 push CI가 통과한 뒤 Actions의 **Production delivery**에서 같은 SHA가 운영에 반영됐는지 확인합니다. PR CI 성공은 배포 완료가 아닙니다. SSH 키, 서버 환경변수, 고객 API 키를 개발자 간 공유하거나 GitHub에 업로드하지 않습니다.
+5. 주간 CI는 코드가 그대로여도 ARM64 이미지의 설치 패키지를 새 보안 공지와 대조합니다. Dependabot PR은 자동 병합하지 않고 호환성·암호문 복호화·잠금 회귀를 다른 변경과 같은 기준으로 검토합니다.

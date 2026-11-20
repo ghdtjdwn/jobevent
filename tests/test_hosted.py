@@ -202,10 +202,11 @@ def test_hosted_manual_quota_and_import_boundary(client):
     assert post(client, "/api/preview", {}).status_code == 429
 
 
-def test_hosted_health_host_and_signup_limit(client):
+def test_hosted_health_host_and_signup_limit(client, monkeypatch):
     from django.test import override_settings
 
-    assert client.get("/healthz").json() == {"status": "ok"}
+    monkeypatch.setenv("JOBEVENT_REVISION", "unit-release")
+    assert client.get("/healthz").json() == {"status": "ok", "revision": "unit-release"}
     assert client.get("/healthz", HTTP_HOST="external.invalid").status_code == 400
     client.get("/signup")
     with override_settings(MAX_ACCOUNTS=0):

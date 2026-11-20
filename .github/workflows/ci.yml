@@ -1,5 +1,14 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 23 * * 0'
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -22,10 +31,20 @@ jobs:
         run: uv run --with playwright==1.65.2 python checks/browser.py
       - run: uv build
   container:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - run: docker build -t jobevent:ci .
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          version: "0.11.25"
+      - run: bash -n deploy/cd/pull-release.sh && docker build -t jobevent:ci .
+      - name: Audit exact third-party Python packages in the ARM64 release image
+        run: |
+          docker run --rm jobevent:ci python -c 'from importlib.metadata import distributions; print("\n".join(sorted({d.metadata["Name"]+"=="+d.version for d in distributions() if d.metadata["Name"].lower()!="jobevent"})))' > "$RUNNER_TEMP/runtime.txt"
+          grep -Eiq '^cryptography==' "$RUNNER_TEMP/runtime.txt"
+          grep -Eiq '^filelock==' "$RUNNER_TEMP/runtime.txt"
+          grep -Eiq '^django==' "$RUNNER_TEMP/runtime.txt"
+          uvx pip-audit==2.10.1 --disable-pip --no-deps --strict -r "$RUNNER_TEMP/runtime.txt"
       - name: Check production configuration and worker
         run: |
           python3 deploy/configure.py example.org
