@@ -1,10 +1,8 @@
 import ipaddress
 import json
 import os
-import re
 import shutil
 from importlib.resources import files
-from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
@@ -18,7 +16,8 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from filelock import Timeout
 
-from jobevent.pipeline import Failure, public_url
+from jobevent.model import profile_link_url
+from jobevent.pipeline import Failure
 
 from .pdf import extract
 from .tenants import account_dir, mutex, quota, service_for
@@ -59,18 +58,6 @@ def client_address(request):
         except ValueError:
             pass
     return request.META.get("REMOTE_ADDR", "unknown")
-
-
-def allowed_reference(url):
-    if not public_url(url):
-        return False
-    if re.fullmatch(r"https://github\.com/[A-Za-z0-9-]+/?", url):
-        return True
-    return (
-        urlsplit(url)
-        .hostname.lower()
-        .endswith((".github.io", ".vercel.app", ".notion.site"))
-    )
 
 
 def error(msg, status):
@@ -238,6 +225,8 @@ def api(request, operation):
             return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
     if request.method != "POST" or operation not in (
         "profile",
+        "profile-link-save",
+        "profile-link-delete",
         "reference-save",
         "reference-delete",
         "room",
@@ -285,11 +274,8 @@ def api(request, operation):
                 and len(service.store.rooms()) >= 12
             ):
                 return error("계정당 알림방은 최대 12개입니다.", 400)
-            if operation == "reference" and not allowed_reference(data.get("url")):
-                return error(
-                    "공개 GitHub 사용자 링크, GitHub Pages·Vercel·Notion의 기본 도메인 페이지만 읽습니다. 다른 포트폴리오는 파일이나 텍스트로 추가하세요.",
-                    400,
-                )
+            if operation == "reference":
+                data["url"] = profile_link_url(data.get("url"))
             if operation == "pdf":
                 return JsonResponse({"text": extract(data.get("data"))})
             return JsonResponse(service.change("/api/" + operation, data))

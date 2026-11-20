@@ -112,6 +112,8 @@ def test_hosted_separates_accounts_and_encrypts_sensitive_fields(
     signup(client)
     assert post(client, "/api/profile", settings).status_code == 200
     assert post(client, "/api/room", room_data).status_code == 200
+    link = {"url": "https://github.com/example-profile", "text": "비공개 검토 메모"}
+    assert post(client, "/api/profile-link-save", link).status_code == 200
     state = client.get("/api/state").json()
     room = state["rooms"][0]
     assert state["profile"] == settings["profile"] and state["hasKey"]
@@ -119,7 +121,9 @@ def test_hosted_separates_accounts_and_encrypts_sensitive_fields(
     db = (
         account_dir(int(client.session["_auth_user_id"])) / "jobevent.sqlite3"
     ).read_bytes()
+    assert state["profileLinks"][0]["text"] == link["text"]
     for value in [
+        *link.values(),
         settings["key"],
         settings["profile"],
         room_data["preferences"],
@@ -135,6 +139,14 @@ def test_hosted_separates_accounts_and_encrypts_sensitive_fields(
     signup(stranger)
     other = stranger.get("/api/state").json()
     assert (other["rooms"], other["profile"], other["hasKey"]) == ([], "", False)
+    assert other["profileLinks"] == []
+    ident = state["profileLinks"][0]["id"]
+    assert post(stranger, "/api/profile-link-delete", {"id": ident}).status_code == 400
+    assert (
+        post(stranger, "/api/profile-link-save", {**link, "id": ident}).status_code
+        == 400
+    )
+    assert client.get("/api/state").json()["profileLinks"] == state["profileLinks"]
     assert post(stranger, "/api/delete", {"id": room["id"]}).status_code == 400
     assert len(client.get("/api/state").json()["rooms"]) == 1
 

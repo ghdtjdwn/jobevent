@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 TEMPLATES = {
@@ -39,6 +40,53 @@ def clean(value, maxlen, required=False):
     ):
         raise ValueError("필수 항목 또는 입력 길이를 확인하세요.")
     return value.strip()
+
+
+def identity(url):
+    u = urlsplit(url)
+    params = [
+        (k, v)
+        for k, v in parse_qsl(u.query, keep_blank_values=True)
+        if not k.lower().startswith("utm_") and k.lower() not in ("fbclid", "gclid")
+    ]
+    return urlunsplit(
+        (
+            "https",
+            u.netloc.lower(),
+            u.path.rstrip("/") or "/",
+            urlencode(sorted(params)),
+            "",
+        )
+    )
+
+
+def profile_link_url(value):
+    """Canonical public profile location. Never save credentials or fetch here."""
+    url = clean(value, 1000, True)
+    message = "공개 GitHub 사용자 주소 또는 GitHub Pages·Vercel·Notion의 공개 HTTPS 주소를 입력하세요."
+    if re.search(r'[\s<>"\\\x00-\x1f\x7f]', url):
+        raise ValueError(message)
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname or ""
+        port = parts.port
+    except ValueError:
+        raise ValueError(message) from None
+    if (
+        parts.scheme != "https"
+        or parts.username is not None
+        or parts.password is not None
+        or port not in (None, 443)
+    ):
+        raise ValueError(message)
+    if host == "github.com" and re.fullmatch(r"/[A-Za-z0-9-]+/?", parts.path):
+        return "https://github.com" + parts.path.rstrip("/").lower()
+    if not re.fullmatch(
+        r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:github\.io|vercel\.app|notion\.site)",
+        host,
+    ):
+        raise ValueError(message)
+    return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
 
 
 def validate_room(data):
@@ -93,6 +141,9 @@ def validate_room(data):
     ):
         raise ValueError("알림방의 참고 자료 선택을 확인하세요.")
     r["referenceIds"] = None if ids is None else list(dict.fromkeys(ids))
+    r["includeProfileLinks"] = data.get("includeProfileLinks", True)
+    if not isinstance(r["includeProfileLinks"], bool):
+        raise ValueError("공통 프로필 링크 사용 여부를 확인하세요.")
     r["enabled"] = data.get("enabled") is True
     return r
 

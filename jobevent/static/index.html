@@ -44,11 +44,8 @@
             ><svg aria-hidden="true"><use href="#i-rooms" /></svg>알림방</a
           >
           <a href="#profile"
-            ><svg aria-hidden="true"><use href="#i-profile" /></svg>추천
-            프로필</a
-          >
-          <a href="#library"
-            ><svg aria-hidden="true"><use href="#i-doc" /></svg>참고 자료</a
+            ><svg aria-hidden="true"><use href="#i-profile" /></svg>프로필
+            관리</a
           >
           <a href="#history"
             ><svg aria-hidden="true"><use href="#i-history" /></svg>실행 기록</a
@@ -111,137 +108,200 @@
           <section class="page" id="profile" hidden>
             <div class="page-head">
               <div>
-                <p class="eyebrow">추천 설정</p>
-                <h1>추천 프로필</h1>
-                <p>모든 알림방이 함께 참고할 경험과 희망 조건을 관리하세요.</p>
+                <p class="eyebrow">내 워크스페이스</p>
+                <h1>프로필 관리</h1>
+                <p>추천에 쓸 자료를 한 번만 저장하고 알림방마다 골라 쓰세요.</p>
               </div>
             </div>
-            <form id="settings" class="stack">
-              <fieldset class="sheet">
-                <legend>내 경험과 관심사</legend>
+            <nav class="profile-shortcuts" aria-label="프로필 관리 바로가기">
+              <a href="#profile/docs">내 자료</a>
+              <a href="#profile/links">내 공개 링크</a>
+              <a href="#profile/ai">AI 연결</a>
+            </nav>
+            <section aria-labelledby="docsHeading" class="profile-block">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">알림방에서 선택하는 정보</p>
+                  <h2 id="docsHeading" tabindex="-1">
+                    내 자료 <span class="count" id="refCount"></span>
+                  </h2>
+                </div>
+                <button id="newRef" type="button" class="primary">
+                  ＋ 자료 추가
+                </button>
+              </div>
+              <p class="hint">
+                이력서 파일을 올리거나 프로젝트·활동 경험을 글로 남기세요.
+                링크나 별도의 자기소개는 필요 없습니다.
+              </p>
+              <form id="refForm" class="sheet" hidden>
+                <h2 id="refFormTitle">자료 추가</h2>
+                <input type="hidden" name="id" /><label
+                  >자료 이름<input
+                    required
+                    maxlength="100"
+                    name="title"
+                    placeholder="예: 개발 직무 이력서"
+                /></label>
                 <label
-                  >추천에 사용할 프로필<textarea
-                    rows="6"
+                  >파일에서 가져오기
+                  <span class="hint"
+                    >선택 사항 · PDF, TXT, MD · 최대 4MB. 원본 파일은 보관하지
+                    않습니다.</span
+                  >
+                  <input type="file" id="file" accept=".pdf,.txt,.md" />
+                </label>
+                <label
+                  >추천에 사용할 본문
+                  <span class="hint"
+                    >직접 입력하거나 위에서 가져온 내용을 검토하세요.
+                    12,000자까지 저장합니다.</span
+                  ><textarea
+                    required
+                    rows="7"
+                    name="text"
+                    maxlength="12000"
+                  ></textarea>
+                </label>
+                <div class="actions">
+                  <button class="primary">자료 저장</button
+                  ><button type="button" id="cancelRef">취소</button>
+                </div>
+              </form>
+              <div class="cards" id="refs"></div>
+              <form id="legacyProfile" class="sheet" hidden>
+                <h3>기존 자기소개</h3>
+                <label
+                  >모든 방에서 함께 쓰는 내용<textarea
                     name="profile"
+                    rows="4"
                     maxlength="20000"
-                    placeholder="예: Python 데이터 분석 경험이 있고 서울에서 인턴십을 찾고 있어요."
                   ></textarea>
                 </label>
                 <p class="hint">
-                  알림방마다 다른 이력서·포트폴리오를 쓸 때는
-                  <a href="#library">참고 자료</a>에 각각 저장하세요.
+                  이전에 작성한 소개입니다. 더 이상 쓰지 않으려면 내용을 비우고
+                  저장하세요.
                 </p>
-              </fieldset>
-              <fieldset class="sheet">
-                <legend>AI 연결</legend>
-                <p id="keyState" class="caption"></p>
-                <label
-                  >AI 제공자<select name="provider">
-                    <option value="openai">OpenAI</option>
-                    <option value="google">Google Gemini</option>
-                    <option value="anthropic">Anthropic Claude</option>
-                  </select></label
-                >
-                <p class="hint">
-                  모든 방이 같은 제공자를 사용합니다. 변경하면 기존 방은
-                  유지되고 새 키가 필요합니다.
-                </p>
-                <label
-                  ><span id="keyLabel">OpenAI API 키</span
-                  ><input
-                    name="key"
-                    type="password"
-                    autocomplete="off"
-                    placeholder="새로 등록하거나 교체할 키"
-                /></label>
-                <p class="hint">
-                  <a
-                    id="keyLink"
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >OpenAI에서 키 발급하기</a
-                  >
-                  · 추천 실행 시 본인 계정에 요금이 발생할 수 있습니다.
-                </p>
-              </fieldset>
-              <p id="privacyCopy" class="note">
-                키와 웹훅은 OS 자격 증명 저장소에, 프로필은 이 기기에
-                저장됩니다. 추천 실행 시 내 키로 프로필을 선택한 AI 제공자에게
-                전달합니다. 기밀·민감 정보는 넣지 마세요.
+                <button>자기소개 변경 저장</button>
+              </form>
+            </section>
+            <section
+              aria-labelledby="linksHeading"
+              id="profileLinksPanel"
+              class="profile-block"
+            >
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">여러 방에서 함께 쓰는 정보</p>
+                  <h2 id="linksHeading" tabindex="-1">
+                    내 공개 링크 <span id="linkCount" class="count"></span>
+                  </h2>
+                </div>
+                <button id="newLink" type="button">＋ 링크 추가</button>
+              </div>
+              <p class="hint">
+                GitHub나 자기소개 사이트는 여기에 한 번만 등록하세요. 알림방은
+                저장한 본문을 참고하며, 방마다 사용을 끌 수 있습니다.
               </p>
-              <div class="actions">
-                <button class="primary">프로필 저장</button
-                ><button id="forget" class="quiet danger" type="button">
-                  키·프로필·자료 지우기
-                </button>
-              </div>
-            </form>
-          </section>
-          <section class="page" id="library" hidden>
-            <div class="page-head">
-              <div>
-                <p class="eyebrow">추천 설정</p>
-                <h1>참고 자료</h1>
-                <p>
-                  이력서와 포트폴리오를 따로 보관하고, 알림방에 필요한 자료만
-                  골라 쓰세요.
-                </p>
-              </div>
-              <button id="newRef" type="button" class="primary">
-                ＋ 자료 추가
-              </button>
-            </div>
-            <form id="refForm" class="sheet" hidden>
-              <h2 id="refFormTitle">자료 추가</h2>
-              <input type="hidden" name="id" /><label
-                >자료 이름<input
-                  required
-                  maxlength="100"
-                  name="title"
-                  placeholder="예: 개발 직무 이력서"
-              /></label>
-              <details>
-                <summary>이력서 또는 공개 링크에서 가져오기</summary>
-                <p>
-                  추출한 본문을 확인하고 불필요한 정보는 지운 뒤 저장하세요.
-                  원본 파일은 보관하지 않습니다.
-                </p>
+              <form id="profileLinkForm" class="sheet" hidden>
+                <h3 id="linkFormTitle">공개 링크 추가</h3>
+                <input type="hidden" name="id" />
                 <label
-                  >이력서 또는 포트폴리오 파일
-                  <span class="hint">PDF · TXT · MD, 최대 4MB</span
-                  ><input type="file" id="file" accept=".pdf,.txt,.md"
-                /></label>
-                <label
-                  ><span id="linkLabel"
-                    >공개 GitHub 사용자 또는 포트폴리오 주소</span
-                  ><input
+                  >공개 주소<input
                     type="url"
-                    id="reference"
-                    placeholder="https://" /></label
-                ><button type="button" id="import">본문 가져오기</button>
-              </details>
-              <label
-                >추천에 사용할 본문
-                <span class="hint"
-                  >직접 입력하거나 위에서 가져온 내용을 검토하세요. 12,000자까지
-                  저장합니다.</span
-                ><textarea
-                  required
-                  rows="7"
-                  name="text"
-                  maxlength="12000"
-                ></textarea>
-              </label>
-              <div class="actions">
-                <button class="primary">자료 저장</button
-                ><button type="button" id="cancelRef">취소</button>
+                    name="url"
+                    required
+                    maxlength="1000"
+                    placeholder="https://github.com/username"
+                    aria-describedby="linkDomains"
+                /></label>
+                <p class="hint" id="linkDomains">
+                  GitHub 사용자 페이지, github.io, vercel.app, notion.site
+                  주소를 지원합니다. 다른 사이트는 내 자료에 텍스트나 파일로
+                  추가하세요.
+                </p>
+                <button type="button" id="readLink">
+                  주소에서 본문 가져오기
+                </button>
+                <label
+                  >추천에 사용할 본문<textarea
+                    name="text"
+                    required
+                    rows="5"
+                    maxlength="6000"
+                    aria-describedby="linkPrivacy"
+                    placeholder="가져온 본문에서 필요한 내용만 남기거나 직접 작성하세요."
+                  ></textarea>
+                </label>
+                <p class="hint" id="linkPrivacy">
+                  6,000자까지 저장합니다. 추천할 때 선택한 AI에 전달되며,
+                  사이트가 바뀌어도 자동으로 다시 읽지 않습니다.
+                </p>
+                <div class="actions">
+                  <button class="primary">링크 저장</button>
+                  <button type="button" id="cancelLink">취소</button>
+                </div>
+              </form>
+              <div class="cards" id="profileLinkList"></div>
+            </section>
+            <section class="profile-block" aria-labelledby="aiHeading">
+              <div class="section-head">
+                <h2 id="aiHeading" tabindex="-1">AI 연결</h2>
               </div>
-            </form>
-            <div class="section-head">
-              <h2>보관한 자료 <span class="count" id="refCount"></span></h2>
-            </div>
-            <div class="cards" id="refs"></div>
+              <form id="settings" class="stack">
+                <fieldset class="sheet">
+                  <legend>회사와 API 키</legend>
+                  <p id="keyState" class="caption"></p>
+                  <label
+                    >AI 제공자<select name="provider">
+                      <option value="openai">OpenAI</option>
+                      <option value="google">Google Gemini</option>
+                      <option value="anthropic">Anthropic Claude</option>
+                    </select></label
+                  >
+                  <p class="hint">
+                    모든 방이 같은 제공자를 사용합니다. 변경하면 기존 방은
+                    유지되고 새 키가 필요합니다.
+                  </p>
+                  <label
+                    ><span id="keyLabel">OpenAI API 키</span
+                    ><input
+                      name="key"
+                      type="password"
+                      autocomplete="off"
+                      placeholder="새로 등록하거나 교체할 키"
+                  /></label>
+                  <p class="hint">
+                    <a
+                      id="keyLink"
+                      href="https://platform.openai.com/api-keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >OpenAI에서 키 발급하기</a
+                    >
+                    · 추천 실행 시 본인 계정에 요금이 발생할 수 있습니다.
+                  </p>
+                </fieldset>
+                <p id="privacyCopy" class="note">
+                  키와 웹훅은 OS 자격 증명 저장소에, 프로필은 이 기기에
+                  저장됩니다. 추천 실행 시 내 키로 프로필을 선택한 AI 제공자에게
+                  전달합니다. 기밀·민감 정보는 넣지 마세요.
+                </p>
+                <div class="actions">
+                  <button class="primary">AI 연결 저장</button>
+                </div>
+              </form>
+            </section>
+            <details class="profile-block">
+              <summary>프로필 데이터 전체 삭제</summary>
+              <p class="hint">
+                AI 키·공개 링크·자료를 지우고 모든 방의 예약을 끕니다. 일부만
+                지우려면 해당 항목에서 삭제하세요.
+              </p>
+              <button id="forget" class="quiet danger" type="button">
+                전체 삭제
+              </button>
+            </details>
           </section>
           <section class="page" id="editor" hidden>
             <a class="back" href="#rooms">‹ 알림방 목록</a>
@@ -317,10 +377,14 @@
                   </select></label
                 >
                 <div id="refChoices" hidden></div>
+                <label class="check"
+                  ><input type="checkbox" name="includeProfileLinks" checked />
+                  내 공개 링크도 참고</label
+                >
+                <p class="hint" id="roomLinkHint"></p>
                 <p class="hint">
-                  공통 프로필은 항상 사용하며, 방 하나에 쓰는 자료는 합계
-                  60,000자 이내여야 합니다. 직접 선택에서 아무 자료도 고르지
-                  않으면 공통 프로필만 사용합니다.
+                  자료를 고르지 않으면 위에서 허용한 공개 링크와 기존 자기소개만
+                  사용합니다. 추천에 쓸 본문은 모두 합해 60,000자까지입니다.
                 </p>
               </fieldset>
               <fieldset class="sheet">

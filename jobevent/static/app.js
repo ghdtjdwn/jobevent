@@ -41,7 +41,7 @@ function providerDetails() {
     ? "제공자를 바꾸려면 새 API 키를 입력하세요."
     : state?.hasKey
       ? "키 등록됨 · 빈칸으로 저장하면 현재 키를 유지합니다."
-      : "키 미등록 · 연결 전에도 프로필을 작성할 수 있습니다.";
+      : "키 미등록 · 키 없이도 자료와 공개 링크를 저장할 수 있습니다.";
 }
 function group(tag, cls, ...children) {
   const el = document.createElement(tag);
@@ -58,10 +58,14 @@ function go(path) {
 }
 function route(focus = true) {
   if (!state) return;
-  const [path, id] = location.hash.slice(1).split("/");
-  let screen = ["profile", "library", "history"].includes(path)
-    ? path
-    : "rooms";
+  let [path, id] = location.hash.slice(1).split("/");
+  // Existing bookmarks land on the same documents, now inside profile management.
+  if (path === "library") {
+    path = "profile";
+    id = "docs";
+    history.replaceState(null, "", "#profile/docs");
+  }
+  let screen = ["profile", "history"].includes(path) ? path : "rooms";
   if (path === "account" && state.hosted) screen = "account";
   if (["new", "edit", "copy"].includes(path)) {
     const r = id && state.rooms.find((item) => item.id === id);
@@ -81,7 +85,13 @@ function route(focus = true) {
   const title = $("#" + screen + " h1").textContent;
   $("#locationLabel").textContent = title;
   document.title = title + " · Jobevent";
-  if (focus) {
+  const section =
+    screen === "profile" &&
+    { links: "#linksHeading", docs: "#docsHeading", ai: "#aiHeading" }[id];
+  if (section && typeof section === "string") {
+    $(section).focus({ preventScroll: true });
+    $(section).scrollIntoView({ block: "start" });
+  } else if (focus) {
     $("#main").focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }
@@ -203,6 +213,11 @@ function edit(r, copy = false) {
     : r
       ? "빈칸이면 현재 연결을 유지합니다."
       : "저장한 뒤 AI 비용 없이 연결 확인 메시지를 보낼 수 있습니다.";
+  f.includeProfileLinks.checked = r?.includeProfileLinks !== false;
+  $("#roomLinkHint").textContent =
+    "프로필 관리에 등록한 링크 " +
+    state.profileLinks.length +
+    "개 · 켜 두면 나중에 추가한 링크도 포함합니다.";
   roomRefs(r?.referenceIds ?? null);
   sourceFields();
   templateHint();
@@ -347,20 +362,26 @@ async function load(initial) {
   templates = s.templates;
   $("#loading").hidden = true;
   $("#briefLabel").textContent = s.rooms.length ? "현재 상태" : "처음 시작하기";
-  const hasContext = Boolean(s.profile.trim() || s.references?.length);
+  const hasContext = Boolean(
+    s.profile.trim() || s.references?.length || s.profileLinks.length,
+  );
   const ready = !!(s.hasKey && hasContext);
   const next = s.rooms
     .filter((r) => r.enabled)
     .sort((a, b) => a.due - b.due)[0];
   $("#briefTitle").textContent = !ready
-    ? "추천 프로필을 준비하세요"
+    ? !s.hasKey
+      ? "추천에 쓸 AI를 연결하세요"
+      : "첫 자료나 공개 링크를 추가하세요"
     : !s.rooms.length
       ? "첫 알림방을 만드세요"
       : next
         ? "다음 예약 · " + next.name
         : "알림방에서 미리보기를 실행하세요";
   $("#briefCopy").textContent = !ready
-    ? "사용할 AI와 내 경험을 등록하면 공고를 맞춤 선별할 수 있습니다."
+    ? !s.hasKey
+      ? "사용할 회사와 API 키를 등록하세요. 모델은 서비스가 선택합니다."
+      : "이력서, 직접 작성한 글, 공개 링크 중 하나만 있어도 됩니다."
     : !s.rooms.length
       ? "받고 싶은 기회와 Discord 또는 Slack 채널을 연결하세요."
       : next
@@ -374,14 +395,18 @@ async function load(initial) {
   const act = $("#briefAction");
   act.hidden = ready && s.rooms.length && !next;
   act.href = !ready
-    ? "#profile"
+    ? !s.hasKey
+      ? "#profile/ai"
+      : "#profile/docs"
     : !s.rooms.length
       ? "#new"
       : next
         ? "#edit/" + next.id
         : "#rooms";
   act.textContent = !ready
-    ? "추천 프로필 설정"
+    ? !s.hasKey
+      ? "AI 연결로 이동"
+      : "내 자료로 이동"
     : !s.rooms.length
       ? "알림방 만들기"
       : "예약 설정 보기";
@@ -405,25 +430,30 @@ async function load(initial) {
     $("#identity").textContent = s.username;
     $("#privacyCopy").textContent =
       "추천을 실행하면 저장한 프로필과 선별 기준이 내 키로 선택한 AI 제공자에 전달됩니다. 웹 검색에는 방의 공개 검색어만 사용합니다. 키·웹훅·프로필은 서버에서 암호화해 보관합니다. 회사 기밀, 연락처, 주민등록번호는 넣지 마세요.";
-    $("#linkLabel").textContent =
-      "GitHub 사용자 또는 공개 포트폴리오 주소 (github.io · vercel.app · notion.site)";
     $("#accountNav").hidden = false;
     $("#who").textContent = s.username + " 님의 계정입니다.";
   }
   if (initial) {
-    settings.elements.profile.value = s.profile;
+    $("#legacyProfile").elements.profile.value = s.profile;
     settings.elements.provider.value = s.provider || "openai";
     for (const [k, v] of Object.entries(templates)) {
       f.template.append(new Option(k, k));
       $("#templateGuide").append(
         node("dt", k),
-        node("dd", (v || "직접 입력한 조건에 맞는 공개 모집 공고") + " · " + s.templateChecks[k]),
+        node(
+          "dd",
+          (v || "직접 입력한 조건에 맞는 공개 모집 공고") +
+            " · " +
+            s.templateChecks[k],
+        ),
       );
     }
     f.query.value = templates[f.template.value];
     templateHint();
   }
   providerDetails();
+  $("#legacyProfile").hidden = !s.profile;
+  renderLinks();
   renderRefs();
   $("#cards").replaceChildren(...s.rooms.map(card));
   if (!s.rooms.length)
@@ -480,7 +510,7 @@ settings.onsubmit = (e) => {
     settings.elements.key.value = "";
     await load(false);
     $("#results").hidden = true;
-    notice("프로필을 저장했습니다.");
+    notice("AI 연결 설정을 저장했습니다.");
   });
 };
 room.onsubmit = (e) => {
@@ -489,6 +519,7 @@ room.onsubmit = (e) => {
     const d = Object.fromEntries(new FormData(room));
     d.limit = Number(d.limit);
     d.enabled = f.enabled.checked;
+    d.includeProfileLinks = f.includeProfileLinks.checked;
     d.referenceIds =
       f.refMode.value === "all"
         ? null
@@ -507,6 +538,12 @@ room.onsubmit = (e) => {
 };
 const refForm = $("#refForm");
 function editRef(ref) {
+  if (
+    busy ||
+    (!refForm.hidden &&
+      !confirm("현재 자료 편집을 닫을까요? 저장하지 않은 변경은 사라집니다."))
+  )
+    return;
   refForm.reset();
   refForm.hidden = false;
   $("#refFormTitle").textContent = ref ? "자료 편집" : "자료 추가";
@@ -520,16 +557,133 @@ function closeRef() {
   refForm.hidden = true;
   $("#newRef").focus();
 }
+const linkForm = $("#profileLinkForm");
+function editLink(link) {
+  if (busy) return;
+  const l = linkForm.elements;
+  if (
+    !linkForm.hidden &&
+    !confirm("작성 중인 링크 편집을 닫을까요? 저장하지 않은 변경은 사라집니다.")
+  )
+    return;
+  linkForm.reset();
+  l.id.value = link?.id || "";
+  l.url.value = link?.url || "";
+  l.text.value = link?.text || "";
+  $("#linkFormTitle").textContent = link ? "공개 링크 편집" : "공개 링크 추가";
+  linkForm.hidden = false;
+  l.url.focus();
+}
+function closeLink() {
+  linkForm.reset();
+  linkForm.hidden = true;
+  ($("#newLink").disabled ? $("#linksHeading") : $("#newLink")).focus();
+}
+function renderLinks() {
+  const links = state.profileLinks;
+  $("#newLink").disabled = links.length >= 5;
+  $("#linkCount").textContent = links.length + " / 5";
+  $("#profileLinkList").replaceChildren(
+    ...links.map((link) => {
+      const remove = button("삭제", () => {
+        if (
+          !confirm(
+            "이 공개 링크를 삭제할까요? 이 링크를 참고하던 방에서도 빠집니다. 다른 자료는 유지됩니다.",
+          )
+        )
+          return;
+        task(async () => {
+          await api("profile-link-delete", { id: link.id });
+          if (linkForm.elements.id.value === link.id) closeLink();
+          await load(false);
+          $("#results").hidden = true;
+          notice("공개 링크를 삭제했습니다.");
+        });
+      });
+      remove.className = "quiet danger";
+      return group(
+        "article",
+        "room-card",
+        node("h3", link.url),
+        node(
+          "p",
+          link.text.length > 120 ? link.text.slice(0, 120) + "…" : link.text,
+        ),
+        group(
+          "div",
+          "actions",
+          button("편집", () => editLink(link)),
+          remove,
+        ),
+      );
+    }),
+  );
+}
+$("#newLink").onclick = () => editLink(null);
+$("#cancelLink").onclick = () => {
+  if (!busy) closeLink();
+};
+$("#readLink").onclick = () => {
+  const l = linkForm.elements;
+  if (!l.url.reportValidity()) return;
+  const url = l.url.value,
+    previous = l.text.value;
+  if (
+    previous &&
+    !confirm(
+      "편집 중인 본문을 이 주소에서 새로 읽은 내용으로 바꿀까요? 저장하기 전에는 기존 자료가 바뀌지 않습니다.",
+    )
+  )
+    return;
+  task(async () => {
+    const result = await api("reference", { url });
+    if (l.url.value !== url || l.text.value !== previous) {
+      notice("입력이 변경되어 가져온 본문을 적용하지 않았습니다.");
+      return;
+    }
+    l.text.value = result.text;
+    l.text.focus();
+    notice("내용을 확인한 다음 링크를 저장하세요.");
+  });
+};
+linkForm.onsubmit = (e) => {
+  e.preventDefault();
+  task(async () => {
+    await api("profile-link-save", Object.fromEntries(new FormData(linkForm)));
+    await load(false);
+    closeLink();
+    $("#results").hidden = true;
+    notice("공개 링크를 저장했습니다.");
+  });
+};
+$("#legacyProfile").onsubmit = (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  task(async () => {
+    await api("profile", { profile: form.elements.profile.value });
+    await load(false);
+    $("#results").hidden = true;
+    notice("자기소개 변경을 저장했습니다.");
+  });
+};
 function renderRefs() {
   const refs = state.references || [];
   $("#refCount").textContent = refs.length + " / 30";
   $("#refs").replaceChildren(
     ...refs.map((ref) => {
       const heading = node("h3", ref.title),
+        roomsUsing = state.rooms.filter(
+          (room) =>
+            room.referenceIds == null || room.referenceIds.includes(ref.id),
+        ).length,
         details = group(
           "p",
           "caption",
-          ref.text.length.toLocaleString() + "자",
+          ref.text.length.toLocaleString() +
+            "자 · " +
+            (roomsUsing
+              ? "알림방 " + roomsUsing + "개에서 사용"
+              : "사용 중인 방 없음"),
         );
       const rem = button("삭제", () => {
         if (
@@ -542,6 +696,7 @@ function renderRefs() {
             await api("reference-delete", { id: ref.id });
             if (refForm.elements.id.value === ref.id) closeRef();
             await load(false);
+            $("#results").hidden = true;
             notice("자료를 삭제했습니다.");
           });
       });
@@ -564,7 +719,7 @@ function renderRefs() {
     $("#refs").append(
       empty(
         "보관한 자료가 없습니다",
-        "자료 추가에서 본문을 입력하거나 파일·공개 링크를 가져오세요.",
+        "자료 추가에서 파일을 고르거나 본문을 직접 입력하세요.",
       ),
     );
 }
@@ -582,45 +737,50 @@ function roomRefs(ids) {
       return group("label", "check", c, ref.title);
     }),
   );
-  if (!refs.length)
-    box.append(node("p", "고를 자료가 없습니다. 공통 프로필만 사용합니다."));
+  if (!refs.length) box.append(node("p", "아직 고를 자료가 없습니다."));
 }
 f.refMode.onchange = () =>
   ($("#refChoices").hidden = f.refMode.value === "all");
 $("#newRef").onclick = () => editRef(null);
-$("#cancelRef").onclick = closeRef;
+$("#cancelRef").onclick = () => {
+  if (!busy) closeRef();
+};
 refForm.onsubmit = (e) => {
   e.preventDefault();
   task(async () => {
     await api("reference-save", Object.fromEntries(new FormData(refForm)));
     await load(false);
     closeRef();
-    notice("참고 자료를 저장했습니다.");
+    $("#results").hidden = true;
+    notice("자료를 저장했습니다.");
   });
 };
-function appendProfile(text) {
+function appendFileText(text) {
+  if (!text.trim())
+    throw Error(
+      "파일에 읽을 본문이 없습니다. 다른 파일을 선택하거나 직접 입력하세요.",
+    );
   const p = refForm.elements.text;
   const merged = [p.value, text].filter(Boolean).join("\n\n");
   if (merged.length > 12000) {
     if (!confirm("12,000자를 넘었습니다. 앞부분만 가져와 편집할까요?")) {
       notice("가져오기를 취소했습니다.");
-      return;
+      return false;
     }
   }
   p.value = merged.slice(0, 12000);
   p.focus();
   notice("본문을 확인하고 자료를 저장하세요.");
+  return true;
 }
-$("#import").onclick = () =>
-  task(async () =>
-    appendProfile(
-      (await api("reference", { url: $("#reference").value })).text,
-    ),
-  );
 $("#file").onchange = () =>
   task(async () => {
     const file = $("#file").files[0];
     if (!file) return;
+    $("#file").value = "";
+    if (!/\.(pdf|txt|md)$/i.test(file.name))
+      throw Error("PDF, TXT 또는 MD 파일을 선택하세요.");
+    let text;
     if (file.size > 4_000_000) throw Error("4MB 이하 파일을 선택하세요.");
     if (file.name.toLowerCase().endsWith(".pdf")) {
       const data = await new Promise((ok, fail) => {
@@ -629,9 +789,16 @@ $("#file").onchange = () =>
         rd.onerror = fail;
         rd.readAsDataURL(file);
       });
-      appendProfile((await api("pdf", { data })).text);
-    } else appendProfile(await file.text());
-    $("#file").value = "";
+      text = (await api("pdf", { data })).text;
+    } else text = await file.text();
+    if (!appendFileText(text)) return;
+    if (
+      !refForm.elements.title.value.trim() &&
+      refForm.elements.text.value.trim()
+    )
+      refForm.elements.title.value = file.name
+        .replace(/\.[^.]+$/, "")
+        .slice(0, 100);
   });
 
 f.template.onchange = () => {
@@ -641,13 +808,16 @@ f.template.onchange = () => {
 $("#forget").onclick = () => {
   if (
     confirm(
-      "키·공통 프로필·보관한 참고 자료를 모두 지우고 모든 방의 예약을 끌까요? 되돌릴 수 없습니다.",
+      "키·공개 링크·자기소개·보관한 자료를 모두 지우고 모든 방의 예약을 끌까요? 되돌릴 수 없습니다.",
     )
   )
     task(async () => {
       await api("forget", {});
       settings.elements.key.value = "";
-      settings.elements.profile.value = "";
+      $("#legacyProfile").reset();
+      closeLink();
+      closeRef();
+      $("#results").hidden = true;
       await load(false);
       notice("삭제했습니다.");
     });

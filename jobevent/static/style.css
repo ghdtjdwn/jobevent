@@ -935,7 +935,7 @@ footer span {
 @media (max-width: 660px) {
   .rail nav {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .rail nav a {
     flex-direction: column;
@@ -948,6 +948,32 @@ footer span {
     display: block;
   }
   .rail nav:has(#accountNav[hidden]) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.profile-shortcuts {
+  display: flex;
+  gap: 1.1rem;
+  border-block: 1px solid var(--line);
+}
+.profile-shortcuts a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 650;
+}
+.profile-block {
+  max-width: 800px;
+  margin-block: 2rem;
+}
+.profile-block .section-head {
+  margin-bottom: 0.5rem;
+}
+.profile-block > form,
+.profile-block > .cards {
+  margin-top: 0.75rem;
+}
+.profile-block h2 {
+  scroll-margin-top: 1rem;
 }
