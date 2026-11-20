@@ -6,6 +6,8 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY jobevent ./jobevent
 RUN uv sync --locked --no-dev --no-editable && groupadd --gid 10001 jobevent && useradd --uid 10001 --gid 10001 --no-create-home jobevent && install -d -m 700 -o jobevent -g jobevent /var/lib/jobevent
+ARG JOBEVENT_REVISION=development
+ENV JOBEVENT_REVISION=$JOBEVENT_REVISION
 USER 10001:10001
 EXPOSE 8000
 CMD ["gunicorn","jobevent.hosted.wsgi:application","--bind","0.0.0.0:8000","--workers","2","--threads","2","--timeout","300"]

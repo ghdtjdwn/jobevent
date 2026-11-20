@@ -1,5 +1,6 @@
 import ipaddress
 import json
+import os
 import re
 import shutil
 from importlib.resources import files
@@ -78,7 +79,9 @@ def error(msg, status):
 
 @require_GET
 def health(request):
-    return JsonResponse({"status": "ok"})
+    return JsonResponse(
+        {"status": "ok", "revision": os.environ.get("JOBEVENT_REVISION", "development")}
+    )
 
 
 @require_GET
