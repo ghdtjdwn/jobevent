@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path(name, views.mobile_asset, {"name": name}) for name in views.MOBILE_ASSETS
+] + [
     path("", views.home),
     path("healthz", views.health),
     path("app", views.studio),

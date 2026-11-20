@@ -86,6 +86,22 @@ def home(request):
     return redirect("/app" if request.user.is_authenticated else "/signup")
 
 
+MOBILE_ASSETS = {
+    "manifest.webmanifest": "application/manifest+json",
+    "install.js": "text/javascript",
+    "sw.js": "text/javascript",
+    **{f"icon-{size}.png": "image/png" for size in (180, 192, 512)},
+}
+
+
+@require_GET
+def mobile_asset(request, name):
+    return HttpResponse(
+        files("jobevent.static").joinpath(name).read_bytes(),
+        content_type=MOBILE_ASSETS[name],
+    )
+
+
 @require_GET
 def asset(request, name):
     return HttpResponse(
@@ -100,7 +116,15 @@ def asset(request, name):
 @ensure_csrf_cookie
 def studio(request):
     return HttpResponse(
-        files("jobevent.static").joinpath("index.html").read_bytes(),
+        files("jobevent.static")
+        .joinpath("index.html")
+        .read_bytes()
+        .replace(
+            b"<!-- mobile-head -->",
+            files("jobevent.hosted")
+            .joinpath("templates/hosted/mobile.html")
+            .read_bytes(),
+        ),
         content_type="text/html; charset=utf-8",
     )
 
