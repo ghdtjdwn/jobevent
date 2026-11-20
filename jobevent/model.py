@@ -17,6 +17,20 @@ TEMPLATES = {
 }
 
 
+# Public discovery prompts, independent of the user's identity and private documents.
+TEMPLATE_CHECKS = {
+    "채용": "필수 경력과 신입 지원 가능 여부, 근무지·원격 여부, 실제 개별 채용 공고인지",
+    "인턴": "대상 학년·졸업 여부, 근무 기간과 전일제 조건, 채용 연계 여부",
+    "동아리·연합": "기수, 모집 파트, 학교·지역 제한, 활동 요일과 회비",
+    "공모전": "팀·개인 자격, 제출물, 기존 작품·수상작 허용 여부와 권리 조건",
+    "해커톤": "팀 규모, 사전 개발 허용 여부, 현장 참석 일정과 장소",
+    "교육": "대상 수준과 선수 조건, 수강료, 수업 시간·출석 의무",
+    "장학·펠로십": "재학·전공·지역 요건, 지원 기간, 중복 수혜 제한",
+    "오픈소스": "프로그램 기수, 프로젝트·멘토, 지원 자격과 참여 기간",
+    "직접 정의": "사용자가 적은 모집 대상, 필수 조건, 접수 기간",
+}
+
+
 def clean(value, maxlen, required=False):
     if (
         not isinstance(value, str)
@@ -69,6 +83,16 @@ def validate_room(data):
     r["board"] = clean(data.get("board", ""), 100)
     if r["source"] != "web" and not re.fullmatch(r"[A-Za-z0-9_-]+", r["board"]):
         raise ValueError("회사 보드 주소에서 식별자만 입력하세요.")
+    ids = data.get("referenceIds")
+    if ids is not None and (
+        not isinstance(ids, list)
+        or len(ids) > 30
+        or any(
+            not isinstance(i, str) or not re.fullmatch(r"[a-f0-9]{32}", i) for i in ids
+        )
+    ):
+        raise ValueError("알림방의 참고 자료 선택을 확인하세요.")
+    r["referenceIds"] = None if ids is None else list(dict.fromkeys(ids))
     r["enabled"] = data.get("enabled") is True
     return r
 

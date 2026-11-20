@@ -15,3 +15,5 @@
 | 로컬 단일 사용자 실행 | `jobevent/app.py`, `jobevent/store.py` |
 
 GitHub 저장소 권한은 서비스 회원 권한과 무관합니다. 개발자 초대는 유지보수자가 GitHub에서 별도로 처리합니다.
+
+실제 브라우저에서 로그인·자료 보관·방 생성/복제·모바일 탐색을 회귀 검사하려면 Chrome이 있는 환경에서 `uv run --with playwright==1.65.2 python checks/browser.py`를 실행하세요. 임시 로컬 DB만 쓰며 외부 AI·채널을 호출하지 않습니다. `--screenshots docs`는 README의 화면 자료를 갱신합니다.

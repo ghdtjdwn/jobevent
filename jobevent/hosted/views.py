@@ -83,7 +83,7 @@ def health(request):
 
 @require_GET
 def home(request):
-    return redirect("/app" if request.user.is_authenticated else "/signup")
+    return redirect("/app")
 
 
 MOBILE_ASSETS = {
@@ -235,11 +235,15 @@ def api(request, operation):
             return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
     if request.method != "POST" or operation not in (
         "profile",
+        "reference-save",
+        "reference-delete",
         "room",
         "forget",
         "delete",
         "send",
         "preview",
+        "send-preview",
+        "channel-test",
         "reference",
         "pdf",
     ):
@@ -257,9 +261,14 @@ def api(request, operation):
         return error("올바른 JSON이 아닙니다.", 400)
     if not isinstance(data, dict):
         return error("입력 형식 오류", 400)
-    if operation in ("send", "preview", "reference", "pdf") and not quota(
-        "work", uid, 12, 3600
-    ):
+    if operation in (
+        "send",
+        "preview",
+        "send-preview",
+        "channel-test",
+        "reference",
+        "pdf",
+    ) and not quota("work", uid, 12, 3600):
         return error("시간당 수동 작업 한도(12회)에 도달했습니다.", 429)
     try:
         with mutex(f"user-{uid}"):

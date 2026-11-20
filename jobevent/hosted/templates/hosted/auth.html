@@ -1,11 +1,16 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css">{% include 'hosted/mobile.html' %}<title>{% if signup %}회원가입{% else %}로그인{% endif %} · Jobevent</title></head>
-<body><header><b>◈ Jobevent</b><span>기회 알림 스튜디오</span></header><main>
-<div class="hero"><h1>내게 맞는 기회를,<br>내 채널에서.</h1><p>찾고 싶은 공고와 시간을 정하면 서버가 Discord나 Slack으로 새 소식을 보내요. 내 컴퓨터를 계속 켜 둘 필요가 없습니다.</p></div>
-<section><h2>{% if signup %}계정 만들기{% else %}로그인{% endif %}</h2>
-{% if signup %}<p>이메일 없이 아이디와 비밀번호로 시작하세요. 비밀번호를 잊으면 이메일로 재설정할 수 없으니 비밀번호 관리자에 저장하세요.</p>{% endif %}
-{% if message %}<p role="alert">{{ message }}</p>{% endif %}
-<form method="post">{% csrf_token %}{{ form.as_p }}
-<button class="primary">{% if signup %}회원가입{% else %}로그인{% endif %}</button>
-</form><p>{% if signup %}이미 계정이 있나요? <a href="/signin">로그인</a>{% else %}처음인가요? <a href="/signup">계정 만들기</a>{% endif %}</p></section>
-<section><h2>어디에 저장되나요?</h2><p>서버가 내 프로필·API 키·웹훅을 암호화해 보관합니다. 추천 실행 때 내 키로 OpenAI에 프로필과 공고를 전달하며 비용이 발생할 수 있습니다. 운영 서버는 처리 중 원문에 접근할 수 있습니다. 승인되지 않은 회사 자료와 민감한 정보는 입력하지 마세요.</p></section>
-<section><h2>휴대폰 홈 화면에서 열기</h2><p>아이폰은 Safari의 공유 → 홈 화면에 추가, Android는 브라우저 메뉴의 앱 설치 또는 홈 화면에 추가를 선택하세요. 알림은 설정한 Discord·Slack 채널에서 받습니다.</p></section></main></body></html>
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css">{% include 'hosted/mobile.html' %}<title>{% if signup %}회원가입{% else %}로그인{% endif %} · Jobevent</title></head>
+<body class="auth"><a class="skip" href="#authForm">계정 입력으로 건너뛰기</a>
+<header class="authbar"><a href="/" class="brand"><span class="brandmark" aria-hidden="true"></span>Jobevent</a><span class="authbar-label">개인 워크스페이스</span></header>
+<main class="authstage"><div class="authpanel"><div class="authhead"><span class="eyebrow">워크스페이스 접속</span><h1>{% if signup %}계정 만들기{% else %}로그인{% endif %}</h1><p>{% if signup %}내 프로필과 알림방을 따로 보관할 계정을 만드세요. API 키는 가입 후 등록합니다.{% else %}아이디와 비밀번호를 입력해 내 알림방을 여세요.{% endif %}</p></div>
+<form id="authForm" method="post">{% csrf_token %}
+{% if message or form.non_field_errors %}<div class="errbox" role="alert">{{ message }}{{ form.non_field_errors }}</div>{% endif %}
+{% for field in form %}<div class="authfield"><label for="{{ field.id_for_label }}">{% if field.name == 'username' %}아이디{% elif field.name == 'password2' %}비밀번호 확인{% else %}비밀번호{% endif %}</label>
+{{ field }}
+{% if field.help_text %}<div class="hint" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+{% if field.errors %}<div class="errbox" role="alert">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+{% if signup %}<p class="auth-note">이메일을 받지 않아 이메일로 비밀번호를 찾을 수 없습니다. 비밀번호 관리자에 저장해 두세요.</p>{% endif %}
+<button class="primary wide">{% if signup %}회원가입{% else %}로그인{% endif %}</button>
+</form><p class="authother">{% if signup %}이미 계정이 있나요? <a href="/signin">로그인</a>{% else %}처음인가요? <a href="/signup">계정 만들기</a>{% endif %}</p></div>
+<details class="authdetails"><summary>키와 프로필은 어떻게 사용하나요?</summary><p>키·웹훅·프로필은 서버에서 암호화해 보관하며 처리 중에는 운영 서버가 원문에 접근할 수 있습니다. 추천을 실행하면 본인의 키로 프로필과 공고를 선택한 AI 제공자에 전달해 비용이 생길 수 있습니다. 기밀·민감 정보는 입력하지 마세요.</p></details>
+</main><footer>Jobevent <span>·</span> 개인 맞춤 기회 알림</footer></body></html>

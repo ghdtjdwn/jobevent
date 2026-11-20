@@ -4,7 +4,6 @@ import argparse
 import base64
 import json
 import os
-import re
 import threading
 import time
 import uuid
@@ -15,9 +14,11 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
+from . import library
 from .imports import pdf_text, reference
-from .model import TEMPLATES, channel, clean, validate_room
-from .pipeline import Failure, run
+from .model import TEMPLATE_CHECKS, TEMPLATES, channel, clean, validate_room
+from .pipeline import Failure, check_channel, run, send_items
+from .providers import MODELS
 from .store import Store, Vault
 
 
@@ -47,7 +48,18 @@ class Service:
         self.store.log(
             r["id"], f"{'미리보기' if preview else '발송'} · 신규 {len(items)}건"
         )
-        return {"items": items}
+        result = {"items": items}
+        if preview:
+            token = uuid.uuid4().hex
+            self.store.set(
+                "preview:" + r["id"],
+                json.dumps({"token": token, "until": time.time() + 900, "items": items})
+                if items
+                else "",
+            )
+            if items:
+                result["previewToken"] = token
+        return result
 
     def tick(self):
         if not self.lock.acquire(blocking=False):
@@ -66,10 +78,12 @@ class Service:
     def state(self):
         return dict(
             profile=self.store.get("profile"),
-            model=self.store.get("model", "gpt-4.1"),
+            provider=self.store.get("provider", "openai"),
+            references=library.references(self.store),
             hasKey=self.store.get("configured") == "yes",
             rooms=self.store.rooms(),
             templates=TEMPLATES,
+            templateChecks=TEMPLATE_CHECKS,
             history=self.store.history(),
         )
 
@@ -93,20 +107,51 @@ class Service:
         try:
             if path == "/api/profile":
                 profile = clean(d.get("profile"), 20000)
-                model = clean(d.get("model"), 80, True)
-                if not re.fullmatch(r"[a-zA-Z0-9._-]+", model):
-                    raise ValueError("모델 ID를 확인하세요.")
+                old_provider = self.store.get("provider", "openai")
+                provider = d.get("provider", old_provider)
+                if not isinstance(provider, str) or provider not in MODELS:
+                    raise ValueError("AI 제공 회사를 선택하세요.")
                 key = clean(d.get("key", ""), 500)
+                if (
+                    old_provider != provider
+                    and self.store.get("configured")
+                    and not key
+                ):
+                    raise ValueError(
+                        "회사를 변경하려면 해당 회사의 새 API 키를 입력하세요."
+                    )
                 if key:
-                    self.vault.set("api", key)
+                    self.vault.set(
+                        "api" if provider == "openai" else "api:" + provider, key
+                    )
                     self.store.set("configured", "yes")
+                self.store.set("provider", provider)
+                if old_provider != provider and self.store.get("configured"):
+                    self.vault.set(
+                        "api" if old_provider == "openai" else "api:" + old_provider, ""
+                    )
+                for room in self.store.rooms():
+                    self.store.set("preview:" + room["id"], "")
                 self.store.set("profile", profile)
-                self.store.set("model", model)
+            elif path in ("/api/reference-save", "/api/reference-delete"):
+                delete = path.endswith("-delete")
+                library.update(self.store, d, delete)
+                for room in self.store.rooms():
+                    self.store.set("preview:" + room["id"], "")
+                    ids = room.get("referenceIds")
+                    if delete and ids and d["id"] in ids:
+                        room["referenceIds"] = [i for i in ids if i != d["id"]]
+                        self.store.save(room["id"], validate_room(room), room["kind"])
+
             elif path == "/api/forget":
-                self.vault.set("api", "")
+                provider = self.store.get("provider", "openai")
+                self.vault.set("api" if provider == "openai" else "api:" + provider, "")
+                self.store.set("references", "[]")
                 self.store.set("configured", "")
                 self.store.set("profile", "")
                 for r in self.store.rooms():
+                    self.store.set("preview:" + r["id"], "")
+                    r["referenceIds"] = None
                     r["enabled"] = False
                     self.store.save(r["id"], validate_room(r), r["kind"])
             elif path == "/api/room":
@@ -117,18 +162,55 @@ class Service:
                 kind = channel(hook) if hook else old and old["kind"]
                 if not kind:
                     raise ValueError("웹훅이 필요합니다.")
+                if set(r["referenceIds"] or []) - {
+                    doc["id"] for doc in library.references(self.store)
+                }:
+                    raise ValueError("존재하지 않는 참고 자료입니다.")
                 if r["enabled"] and not (
-                    self.store.get("configured") and self.store.get("profile")
+                    self.store.get("configured") and library.context(self.store, r)
                 ):
                     raise ValueError("예약을 켜려면 키와 프로필을 먼저 저장하세요.")
                 if hook:
                     self.vault.set(i, hook)
+                self.store.set("preview:" + i, "")
                 self.store.save(i, r, kind)
-            elif path in ("/api/preview", "/api/send", "/api/delete"):
+            elif path in (
+                "/api/preview",
+                "/api/send",
+                "/api/delete",
+                "/api/channel-test",
+                "/api/send-preview",
+            ):
                 r = self.room(d.get("id"))
                 if path == "/api/delete":
                     self.vault.set(r["id"], "")
+                    self.store.set("preview:" + r["id"], "")
                     self.store.delete(r["id"])
+                elif path == "/api/channel-test":
+                    try:
+                        check_channel(self.vault.get(r["id"]))
+                    except Failure as e:
+                        self.store.log(r["id"], str(e))
+                        raise
+                    self.store.log(r["id"], "연결 확인 메시지 전송 성공")
+                elif path == "/api/send-preview":
+                    snapshot = json.loads(self.store.get("preview:" + r["id"]) or "{}")
+                    if (
+                        not snapshot
+                        or snapshot["token"] != d.get("token")
+                        or snapshot["until"] <= time.time()
+                    ):
+                        raise Failure(
+                            "미리보기가 만료되었거나 설정이 변경됐습니다. 다시 미리보기 하세요."
+                        )
+                    try:
+                        sent = send_items(self.store, self.vault, r, snapshot["items"])
+                    except Failure as e:
+                        self.store.log(r["id"], str(e))
+                        raise
+                    self.store.set("preview:" + r["id"], "")
+                    self.store.log(r["id"], f"확인한 추천 발송 · {len(sent)}건")
+                    return {"items": sent}
                 else:
                     return self.execute(r, path == "/api/preview")
             else:

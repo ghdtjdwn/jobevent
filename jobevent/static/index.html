@@ -1,217 +1,446 @@
 <!doctype html>
 <html lang="ko">
-  <meta charset="utf-8" /><meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
-  />
-  <!-- mobile-head -->
-  <title>Jobevent · 기회 알림 스튜디오</title
-  ><link rel="stylesheet" href="/style.css" />
-  <header>
-    <b>◈ Jobevent</b><span id="modeLabel">기회 알림 스튜디오</span>
-  </header>
-  <main>
-    <div class="hero">
-      <small>OPPORTUNITY RADAR / 01</small>
-      <h1>찾고 싶은 기회만,<br />내가 쓰는 채널로.</h1>
-      <p>
-        공개 공고를 찾고 내 경험과 맞춰 봅니다. 예약을 켜기 전까지 자동 발송은
-        없습니다.
-      </p>
-    </div>
-    <nav>
-      <a href="#profile">01 프로필</a><a href="#rooms">02 알림방</a
-      ><a href="#history">03 실행 기록</a>
-    </nav>
-    <section id="profile">
-      <small>01 / PRIVATE PROFILE</small>
-      <h2>내 추천 기준</h2>
-      <p id="privacyCopy">
-        키와 웹훅은 OS 자격 증명 저장소에, 프로필은 이 기기에 저장됩니다.
-        실행하면 프로필이 내 OpenAI 계정으로 전송됩니다. 비공개 회사
-        자료·연락처는 넣지 마세요.
-      </p>
-      <form id="settings">
-        <div class="grid">
-          <label
-            >OpenAI API 키<input
-              name="key"
-              type="password"
-              autocomplete="off"
-              placeholder="새 키 또는 교체할 키" /></label
-          ><label>검색 지원 모델 ID<input required name="model" /></label>
-        </div>
-        <p id="keyState"></p>
-        <label
-          >프로필 · 경험 · 희망 조건<textarea
-            rows="5"
-            name="profile"
-            maxlength="20000"
-            placeholder="예: Python으로 데이터 분석 프로젝트를 했고 서울에서 인턴십을 찾고 있어요."
-          ></textarea>
-        </label>
-        <details>
-          <summary>이력서·포트폴리오·GitHub에서 가져오기</summary>
-          <p>
-            공개 링크를 직접 읽거나 파일의 텍스트를 추출합니다. 아래 입력란에서
-            불필요한 개인정보를 지운 뒤 저장하세요. 원본 파일은 보관하지
-            않습니다.
-          </p>
-          <label
-            >이력서 / 포트폴리오 (PDF, TXT, MD · 최대 4MB)<input
-              type="file"
-              id="file"
-              accept=".pdf,.txt,.md"
-          /></label>
-          <label
-            ><span id="linkLabel">공개 GitHub 사용자 또는 포트폴리오 주소</span
-            ><input type="url" id="reference" placeholder="https://…" /></label
-          ><button type="button" id="import">본문 가져오기</button>
-        </details>
-        <div class="actions">
-          <button class="primary">프로필 저장</button
-          ><button id="forget" type="button">키·프로필 지우기</button>
-        </div>
-      </form>
-    </section>
-    <section id="rooms">
-      <small>02 / CHANNELS</small>
-      <h2>내 알림방</h2>
-      <div id="cards"></div>
-      <details id="editor">
-        <summary>알림방 만들기 / 편집</summary>
-        <form id="room">
-          <input type="hidden" name="id" />
-          <div class="grid">
-            <label
-              >방 이름<input
-                required
-                name="name"
-                maxlength="60"
-                placeholder="예: 주말 개발 공모전" /></label
-            ><label>알림 틀<select name="template"></select></label>
-          </div>
-          <div class="grid">
-            <label
-              >공고 수집 방식<select name="source">
-                <option value="web">공개 웹 검색 · 전체 분류</option>
-                <option value="greenhouse">Greenhouse · 회사 지정</option>
-                <option value="lever">Lever · 회사 지정</option>
-                <option value="lever-eu">Lever EU · 회사 지정</option>
-              </select></label
-            ><label
-              >회사 보드 식별자<input
-                name="board"
-                maxlength="100"
-                placeholder="예: Greenhouse의 stripe"
-            /></label>
-          </div>
-          <label
-            >공개 검색어 (웹 검색으로 전송)<input
-              required
-              name="query"
-              maxlength="500"
-              placeholder="예: 대한민국 대학생 소프트웨어 공모전"
-          /></label>
-          <label
-            >개인 선별 기준 (검색어로 쓰지 않음)<input
-              name="preferences"
-              maxlength="600"
-              placeholder="예: 재학생 지원 가능, 수도권 선호"
-          /></label>
-          <div class="grid">
-            <label
-              >알림 말투<input
-                required
-                name="tone"
-                value="간결한 존댓말"
-                maxlength="120" /></label
-            ><label
-              >한 번에 최대 몇 건?<input
-                required
-                type="number"
-                name="limit"
-                min="1"
-                max="8"
-                value="3"
-            /></label>
-          </div>
-          <label
-            >Discord / Slack 웹훅<input
-              type="password"
-              autocomplete="off"
-              name="hook"
-              placeholder="새 방은 필수 · 편집 시 빈칸이면 유지"
-          /></label>
-          <details>
-            <summary>웹훅 만드는 방법</summary>
-            <p>
-              <b>Discord:</b> 서버 설정 → 연동 → 웹후크 → 새 웹후크 → 대상 채널
-              선택 → 웹후크 URL 복사.
-            </p>
-            <p>
-              <b>Slack:</b> Slack 앱의 Incoming Webhooks를 켜고 Add New Webhook
-              to Workspace → 채널 선택 → 허용 → URL 복사. 워크스페이스 관리자
-              승인이 필요할 수 있습니다.
-            </p>
-          </details>
-          <div class="grid">
-            <label
-              >현지 알림 시각<input
-                required
-                type="time"
-                name="time"
-                value="09:00" /></label
-            ><label
-              >시간대<input required name="zone" value="Asia/Seoul"
-            /></label>
-          </div>
-          <fieldset>
-            <legend>실행 요일</legend>
-            <div id="days"></div>
-          </fieldset>
-          <label class="check"
-            ><input type="checkbox" name="enabled" /> 예약 활성화 (유료 API 사용
-            가능)</label
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- mobile-head -->
+    <title>알림방 · Jobevent</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">본문으로 건너뛰기</a>
+    <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="i-rooms" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="13" rx="2" />
+          <path d="m7 21 4-4M7 9h10M7 13h6" />
+        </symbol>
+        <symbol id="i-profile" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <circle cx="9" cy="10" r="2" />
+          <path d="M5.5 16q3.5-6 7 0M15 9h3M15 13h3" />
+        </symbol>
+        <symbol id="i-history" viewBox="0 0 24 24">
+          <path d="M4 11a8 8 0 1 1 1.6 6M3 6v5h5M12 7v5l3 2" />
+        </symbol>
+        <symbol id="i-doc" viewBox="0 0 24 24">
+          <path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6" />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path d="M4 7h5m4 0h7M4 17h10m4 0h2" />
+          <circle cx="11" cy="7" r="2" />
+          <circle cx="16" cy="17" r="2" />
+        </symbol>
+      </defs>
+    </svg>
+    <div class="shell">
+      <aside class="rail">
+        <a href="#rooms" class="brand" aria-label="Jobevent 알림방"
+          ><span class="brandmark" aria-hidden="true"></span>Jobevent</a
+        >
+        <nav aria-label="작업 메뉴">
+          <span class="eyebrow navlabel">워크스페이스</span>
+          <a href="#rooms"
+            ><svg aria-hidden="true"><use href="#i-rooms" /></svg>알림방</a
           >
-          <div class="actions">
-            <button class="primary">알림방 저장</button
-            ><button type="button" id="resetRoom">새 방으로 초기화</button>
-          </div>
-        </form>
-      </details>
-    </section>
-    <section id="history">
-      <small>03 / ACTIVITY</small>
-      <h2>최근 실행</h2>
-      <div id="logs"></div>
-    </section>
-    <section id="results" hidden>
-      <small>RESULT</small>
-      <h2>이번 실행 결과</h2>
-      <div id="items"></div>
-    </section>
-  </main>
-  <aside id="status" role="status" aria-live="polite" hidden></aside>
-  <footer>
-    JOBEVENT · 개인 맞춤 기회 알림
-    <details id="account" hidden>
-      <summary>내 계정 관리</summary>
-      <p id="who"></p>
-      <div class="actions">
-        <button type="button" id="logout">로그아웃</button>
+          <a href="#profile"
+            ><svg aria-hidden="true"><use href="#i-profile" /></svg>추천
+            프로필</a
+          >
+          <a href="#library"
+            ><svg aria-hidden="true"><use href="#i-doc" /></svg>참고 자료</a
+          >
+          <a href="#history"
+            ><svg aria-hidden="true"><use href="#i-history" /></svg>실행 기록</a
+          >
+          <a href="#account" id="accountNav" hidden
+            ><svg aria-hidden="true"><use href="#i-settings" /></svg>계정
+            관리</a
+          >
+        </nav>
+        <div class="rail-foot">
+          <span class="minidot"></span> 개인 워크스페이스
+        </div>
+      </aside>
+      <div class="work">
+        <header class="topbar">
+          <span id="modeLabel">워크스페이스</span
+          ><span class="crumb" aria-hidden="true">/</span
+          ><b id="locationLabel">알림방</b><span id="identity"></span>
+        </header>
+        <main id="main" tabindex="-1">
+          <p id="loading" role="status">워크스페이스를 불러오는 중입니다…</p>
+          <section class="page" id="rooms" hidden>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">워크스페이스</p>
+                <h1>내 알림방</h1>
+                <p>찾고 싶은 기회마다 조건과 받을 채널을 정하세요.</p>
+              </div>
+              <a href="#new" class="button primary"
+                ><span aria-hidden="true">＋</span> 알림방 만들기</a
+              >
+            </div>
+            <div class="brief">
+              <div class="brief-text">
+                <span class="kicker" id="briefLabel">시작 안내</span>
+                <h2 id="briefTitle"></h2>
+                <p id="briefCopy"></p>
+                <a id="briefAction" class="brief-link" href="#profile"></a>
+              </div>
+              <div class="setupsteps" id="steps" aria-label="설정 상태"></div>
+            </div>
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">등록한 채널</p>
+                <h2>알림방 목록 <span id="roomCount" class="count"></span></h2>
+              </div>
+              <span id="activeCount" class="caption"></span>
+            </div>
+            <div id="cards" class="cards"></div>
+            <section id="results" class="results" hidden>
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">추천과 발송</p>
+                  <h2 id="resultTitle">이번 실행 결과</h2>
+                </div>
+              </div>
+              <div id="items"></div>
+            </section>
+          </section>
+          <section class="page" id="profile" hidden>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">추천 설정</p>
+                <h1>추천 프로필</h1>
+                <p>모든 알림방이 함께 참고할 경험과 희망 조건을 관리하세요.</p>
+              </div>
+            </div>
+            <form id="settings" class="stack">
+              <fieldset class="sheet">
+                <legend>내 경험과 관심사</legend>
+                <label
+                  >추천에 사용할 프로필<textarea
+                    rows="6"
+                    name="profile"
+                    maxlength="20000"
+                    placeholder="예: Python 데이터 분석 경험이 있고 서울에서 인턴십을 찾고 있어요."
+                  ></textarea>
+                </label>
+                <p class="hint">
+                  알림방마다 다른 이력서·포트폴리오를 쓸 때는
+                  <a href="#library">참고 자료</a>에 각각 저장하세요.
+                </p>
+              </fieldset>
+              <fieldset class="sheet">
+                <legend>AI 연결</legend>
+                <p id="keyState" class="caption"></p>
+                <label
+                  >AI 제공자<select name="provider">
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google Gemini</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                  </select></label
+                >
+                <p class="hint">
+                  모든 방이 같은 제공자를 사용합니다. 변경하면 기존 방은
+                  유지되고 새 키가 필요합니다.
+                </p>
+                <label
+                  ><span id="keyLabel">OpenAI API 키</span
+                  ><input
+                    name="key"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="새로 등록하거나 교체할 키"
+                /></label>
+                <p class="hint">
+                  <a
+                    id="keyLink"
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >OpenAI에서 키 발급하기</a
+                  >
+                  · 추천 실행 시 본인 계정에 요금이 발생할 수 있습니다.
+                </p>
+              </fieldset>
+              <p id="privacyCopy" class="note">
+                키와 웹훅은 OS 자격 증명 저장소에, 프로필은 이 기기에
+                저장됩니다. 추천 실행 시 내 키로 프로필을 선택한 AI 제공자에게
+                전달합니다. 기밀·민감 정보는 넣지 마세요.
+              </p>
+              <div class="actions">
+                <button class="primary">프로필 저장</button
+                ><button id="forget" class="quiet danger" type="button">
+                  키·프로필·자료 지우기
+                </button>
+              </div>
+            </form>
+          </section>
+          <section class="page" id="library" hidden>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">추천 설정</p>
+                <h1>참고 자료</h1>
+                <p>
+                  이력서와 포트폴리오를 따로 보관하고, 알림방에 필요한 자료만
+                  골라 쓰세요.
+                </p>
+              </div>
+              <button id="newRef" type="button" class="primary">
+                ＋ 자료 추가
+              </button>
+            </div>
+            <form id="refForm" class="sheet" hidden>
+              <h2 id="refFormTitle">자료 추가</h2>
+              <input type="hidden" name="id" /><label
+                >자료 이름<input
+                  required
+                  maxlength="100"
+                  name="title"
+                  placeholder="예: 개발 직무 이력서"
+              /></label>
+              <details>
+                <summary>이력서 또는 공개 링크에서 가져오기</summary>
+                <p>
+                  추출한 본문을 확인하고 불필요한 정보는 지운 뒤 저장하세요.
+                  원본 파일은 보관하지 않습니다.
+                </p>
+                <label
+                  >이력서 또는 포트폴리오 파일
+                  <span class="hint">PDF · TXT · MD, 최대 4MB</span
+                  ><input type="file" id="file" accept=".pdf,.txt,.md"
+                /></label>
+                <label
+                  ><span id="linkLabel"
+                    >공개 GitHub 사용자 또는 포트폴리오 주소</span
+                  ><input
+                    type="url"
+                    id="reference"
+                    placeholder="https://" /></label
+                ><button type="button" id="import">본문 가져오기</button>
+              </details>
+              <label
+                >추천에 사용할 본문
+                <span class="hint"
+                  >직접 입력하거나 위에서 가져온 내용을 검토하세요. 12,000자까지
+                  저장합니다.</span
+                ><textarea
+                  required
+                  rows="7"
+                  name="text"
+                  maxlength="12000"
+                ></textarea>
+              </label>
+              <div class="actions">
+                <button class="primary">자료 저장</button
+                ><button type="button" id="cancelRef">취소</button>
+              </div>
+            </form>
+            <div class="section-head">
+              <h2>보관한 자료 <span class="count" id="refCount"></span></h2>
+            </div>
+            <div class="cards" id="refs"></div>
+          </section>
+          <section class="page" id="editor" hidden>
+            <a class="back" href="#rooms">‹ 알림방 목록</a>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">방 설정</p>
+                <h1 id="editorTitle">알림방 만들기</h1>
+                <p>기회 선택부터 예약까지, 이 방에만 적용할 설정입니다.</p>
+              </div>
+            </div>
+            <form id="room" class="stack">
+              <input type="hidden" name="id" />
+              <fieldset class="sheet">
+                <legend><b>1</b> 어떤 기회를 찾을까요?</legend>
+                <div class="grid">
+                  <label
+                    >방 이름<input
+                      required
+                      name="name"
+                      maxlength="60"
+                      placeholder="예: 주말 개발 공모전" /></label
+                  ><label
+                    >알림 틀<select
+                      name="template"
+                      aria-describedby="templateHint"
+                    ></select
+                  ></label>
+                </div>
+                <p class="hint" id="templateHint"></p>
+                <details>
+                  <summary>알림 틀별 용도 보기</summary>
+                  <dl id="templateGuide"></dl>
+                </details>
+                <label
+                  >공고 출처<select name="source">
+                    <option value="web">공개 웹 검색</option>
+                    <option value="greenhouse">Greenhouse 회사 보드</option>
+                    <option value="lever">Lever 회사 보드</option>
+                    <option value="lever-eu">Lever EU 회사 보드</option>
+                  </select></label
+                >
+                <label id="boardField" hidden
+                  >회사 보드 식별자<input
+                    name="board"
+                    maxlength="100"
+                    placeholder="예: stripe"
+                /></label>
+                <label
+                  >공개 검색 조건
+                  <span class="hint"
+                    >공개 웹 검색에 보낼 수 있는 내용만 입력하세요.</span
+                  ><input
+                    required
+                    name="query"
+                    maxlength="500"
+                    placeholder="예: 대한민국 대학생 소프트웨어 공모전"
+                /></label>
+                <label
+                  >개인 선별 조건
+                  <span class="hint"
+                    >웹 검색에는 보내지 않고, 추천 모델에서만 사용합니다.</span
+                  ><input
+                    name="preferences"
+                    maxlength="600"
+                    placeholder="예: 재학생 지원 가능, 수도권 선호"
+                /></label>
+                <label
+                  >이 방이 참고할 자료<select name="refMode">
+                    <option value="all">
+                      모든 자료 (앞으로 추가할 자료 포함)
+                    </option>
+                    <option value="selected">직접 선택</option>
+                  </select></label
+                >
+                <div id="refChoices" hidden></div>
+                <p class="hint">
+                  공통 프로필은 항상 사용하며, 방 하나에 쓰는 자료는 합계
+                  60,000자 이내여야 합니다. 직접 선택에서 아무 자료도 고르지
+                  않으면 공통 프로필만 사용합니다.
+                </p>
+              </fieldset>
+              <fieldset class="sheet">
+                <legend><b>2</b> 어디로 받을까요?</legend>
+                <label
+                  >Discord 또는 Slack 웹훅 주소<input
+                    type="password"
+                    autocomplete="off"
+                    name="hook"
+                    placeholder="발급받은 웹훅 URL 붙여넣기"
+                /></label>
+                <p id="hookHelp" class="hint"></p>
+                <details>
+                  <summary>채널에서 웹훅 만들기</summary>
+                  <p>
+                    <strong>Discord</strong> · 서버 설정 → 연동 → 웹후크 → 새
+                    웹후크 → 채널 선택 → URL 복사.
+                  </p>
+                  <p>
+                    <strong>Slack</strong> · 앱에서 Incoming Webhooks 활성화 →
+                    Add New Webhook to Workspace → 채널 선택 → URL 복사. 관리자
+                    승인이 필요할 수 있습니다.
+                  </p>
+                </details>
+                <div class="grid">
+                  <label
+                    >추천 말투<input
+                      required
+                      name="tone"
+                      value="간결한 존댓말"
+                      maxlength="120" /></label
+                  ><label
+                    >한 번에 받을 최대 건수<input
+                      required
+                      type="number"
+                      name="limit"
+                      min="1"
+                      max="8"
+                      value="3"
+                  /></label>
+                </div>
+              </fieldset>
+              <fieldset class="sheet">
+                <legend><b>3</b> 언제 받을까요?</legend>
+                <fieldset class="days">
+                  <legend>실행 요일</legend>
+                  <div id="days"></div>
+                </fieldset>
+                <div class="grid">
+                  <label
+                    >현지 시각<input
+                      required
+                      type="time"
+                      name="time"
+                      value="09:00" /></label
+                  ><label
+                    >시간대<input required name="zone" value="Asia/Seoul"
+                  /></label>
+                </div>
+                <label class="check"
+                  ><input type="checkbox" name="enabled" /> 예약 활성화</label
+                >
+                <p class="hint">
+                  켜면 선택한 요일에 내 API 키로 검색·추천하고 채널에
+                  발송합니다. 꺼 두고 먼저 테스트해도 됩니다.
+                </p>
+              </fieldset>
+              <div class="actions">
+                <button class="primary">알림방 저장</button
+                ><a href="#rooms" class="button">취소</a>
+              </div>
+            </form>
+          </section>
+          <section class="page" id="history" hidden>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">워크스페이스</p>
+                <h1>실행 기록</h1>
+                <p>미리보기와 발송 결과를 최근 실행 순으로 확인하세요.</p>
+              </div>
+              <button id="refresh" type="button">새로고침</button>
+            </div>
+            <div id="logs" class="log-list"></div>
+          </section>
+          <section class="page" id="account" hidden>
+            <div class="page-head">
+              <div>
+                <p class="eyebrow">워크스페이스</p>
+                <h1>계정 관리</h1>
+                <p id="who"></p>
+              </div>
+            </div>
+            <div class="sheet">
+              <h2>현재 세션</h2>
+              <p>로그아웃해도 저장한 예약은 서버에서 계속 실행됩니다.</p>
+              <button type="button" id="logout">로그아웃</button>
+            </div>
+            <details class="sheet destructive">
+              <summary>계정 영구 삭제</summary>
+              <p>
+                알림방·키·프로필·실행 기록이 삭제됩니다. 이미 발송한 메시지는
+                남습니다.
+              </p>
+              <form id="deleteAccount">
+                <label
+                  >현재 비밀번호<input
+                    type="password"
+                    required
+                    name="password"
+                    autocomplete="current-password" /></label
+                ><button class="danger">계정 영구 삭제</button>
+              </form>
+            </details>
+          </section>
+        </main>
+        <footer>Jobevent <span>·</span> 개인 맞춤 기회 알림</footer>
       </div>
-      <form id="deleteAccount">
-        <label
-          >회원 탈퇴 확인용 현재 비밀번호<input
-            type="password"
-            required
-            name="password"
-            autocomplete="current-password"
-        /></label>
-        <button>계정 영구 삭제</button>
-      </form>
-    </details>
-  </footer>
-  <script src="/app.js"></script>
+    </div>
+    <aside id="status" role="status" aria-live="polite" hidden></aside>
+    <noscript>대시보드를 사용하려면 자바스크립트를 켜세요.</noscript>
+    <script src="/app.js"></script>
+  </body>
 </html>
