@@ -81,11 +81,26 @@ def profile_link_url(value):
         raise ValueError(message)
     if host == "github.com" and re.fullmatch(r"/[A-Za-z0-9-]+/?", parts.path):
         return "https://github.com" + parts.path.rstrip("/").lower()
-    if not re.fullmatch(
-        r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:github\.io|vercel\.app|notion\.site)",
-        host,
+    labels = host.split(".")
+    if (
+        len(host) > 253
+        or len(labels) < 3
+        or ".".join(labels[-2:])
+        not in {
+            "github.io",
+            "vercel.app",
+            "notion.site",
+        }
     ):
         raise ValueError(message)
+    for label in labels[:-2]:
+        if (
+            not 1 <= len(label) <= 63
+            or label.startswith("-")
+            or label.endswith("-")
+            or not re.fullmatch(r"[a-z0-9-]+", label)
+        ):
+            raise ValueError(message)
     return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
 
 

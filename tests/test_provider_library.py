@@ -187,6 +187,10 @@ def test_link_constraints_and_duplicate_identity(service):
     for extra in [
         {"url": "https://me.vercel.app/work?a=two&utm_source=test&b=one"},
         {"url": "https://other.example"},
+        {"url": "https://vercel.app"},
+        {"url": "https://-name.vercel.app"},
+        {"url": "https://team..vercel.app"},
+        {"url": "https://" + "a" * 64 + ".github.io"},
         {"url": "https://github.com/user/repo"},
         {"url": "https://user@me.vercel.app"},
         {"url": "https://me.vercel.app:8443/"},
