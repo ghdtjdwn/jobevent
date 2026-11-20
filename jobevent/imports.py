@@ -44,12 +44,12 @@ def fetch(url):
         for a in addresses
     ):
         raise ValueError("공개 인터넷 주소만 지원합니다.")
-    conn = http.client.HTTPSConnection(host, timeout=10)
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    conn = http.client.HTTPSConnection(host, timeout=10, context=context)
     try:
         with socket.create_connection((addresses[0], 443), timeout=10) as sock:
-            conn.sock = ssl.create_default_context().wrap_socket(
-                sock, server_hostname=host
-            )
+            conn.sock = context.wrap_socket(sock, server_hostname=host)
             path = quote(u.path or "/", safe="/%:@-._~") + (
                 "?" + quote(u.query, safe="=&%+-._~") if u.query else ""
             )

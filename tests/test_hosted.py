@@ -3,6 +3,7 @@
 import json
 import secrets
 import uuid
+from urllib.parse import urlsplit
 
 import pytest
 from cryptography.fernet import Fernet
@@ -162,9 +163,9 @@ def test_browser_closed_worker_and_shared_lock(client, room_data, settings, tran
         assert transport.calls == []
     client.post("/logout", HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value)
     call_command("runworker", once=True)
-    assert sum("discord.com" in u for u, *_ in transport.calls) == 1
+    assert sum(urlsplit(u).hostname == "discord.com" for u, *_ in transport.calls) == 1
     call_command("runworker", once=True)
-    assert sum("discord.com" in u for u, *_ in transport.calls) == 1
+    assert sum(urlsplit(u).hostname == "discord.com" for u, *_ in transport.calls) == 1
     assert service.store.history()[0]["message"] == "발송 · 신규 1건"
 
 
@@ -190,6 +191,23 @@ def test_account_deletion_erases_tenant_not_another_account(client, settings):
         and not get_user_model().objects.filter(username=username).exists()
     )
     assert client.get("/api/state").status_code == 401
+
+
+def test_hosted_errors_do_not_return_internal_exception_details(client, monkeypatch):
+    from jobevent.app import Service
+    from jobevent.pipeline import Failure
+
+    signup(client)
+    for error in (ValueError, Failure):
+
+        def fail(*_):
+            raise error("internal diagnostic marker")
+
+        monkeypatch.setattr(Service, "change", fail)
+        res = post(client, "/api/profile", {})
+        assert res.status_code == 400
+        assert "API 키" in res.json()["error"]
+        assert "internal diagnostic marker" not in res.json()["error"]
 
 
 def test_hosted_manual_quota_and_import_boundary(client):

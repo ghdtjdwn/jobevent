@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -101,7 +102,9 @@ class Transport:
             return json.dumps({"status": "completed", "output": output}).encode()
         if self.fail_hook:
             raise pipeline.Failure("외부 서비스 연결 실패")
-        return b"ok" if "slack.com" in url else b'{"id":"12345"}'
+        return (
+            b"ok" if urlsplit(url).hostname == "hooks.slack.com" else b'{"id":"12345"}'
+        )
 
 
 @pytest.fixture
