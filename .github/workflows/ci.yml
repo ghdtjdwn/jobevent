@@ -1,0 +1,29 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          version: "0.11.25"
+      - run: uv sync --locked --python ${{ matrix.python }}
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: node --check jobevent/static/app.js
+      - run: uv run pytest -q
+      - run: uv build
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: docker build -t jobevent:ci .
+      - name: Check production configuration and worker
+        run: |
+          python3 deploy/configure.py example.org
+          docker run --rm --env-file .env jobevent:ci sh -ec 'django-admin migrate --noinput && django-admin check --deploy --fail-level ERROR && django-admin runworker --once'

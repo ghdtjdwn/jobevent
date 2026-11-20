@@ -1,0 +1,11 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>{% if signup %}회원가입{% else %}로그인{% endif %} · Jobevent</title></head>
+<body><header><b>◈ Jobevent</b><span>기회 알림 스튜디오</span></header><main>
+<div class="hero"><h1>내게 맞는 기회를,<br>내 채널에서.</h1><p>찾고 싶은 공고와 시간을 정하면 서버가 Discord나 Slack으로 새 소식을 보내요. 내 컴퓨터를 계속 켜 둘 필요가 없습니다.</p></div>
+<section><h2>{% if signup %}계정 만들기{% else %}로그인{% endif %}</h2>
+{% if signup %}<p>이메일 없이 아이디와 비밀번호로 시작하세요. 비밀번호를 잊으면 이메일로 재설정할 수 없으니 비밀번호 관리자에 저장하세요.</p>{% endif %}
+{% if message %}<p role="alert">{{ message }}</p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.as_p }}
+<button class="primary">{% if signup %}회원가입{% else %}로그인{% endif %}</button>
+</form><p>{% if signup %}이미 계정이 있나요? <a href="/signin">로그인</a>{% else %}처음인가요? <a href="/signup">계정 만들기</a>{% endif %}</p></section>
+<section><h2>어디에 저장되나요?</h2><p>서버가 내 프로필·API 키·웹훅을 암호화해 보관합니다. 추천 실행 때 내 키로 OpenAI에 프로필과 공고를 전달하며 비용이 발생할 수 있습니다. 운영 서버는 처리 중 원문에 접근할 수 있습니다. 승인되지 않은 회사 자료와 민감한 정보는 입력하지 마세요.</p></section>
+</main></body></html>

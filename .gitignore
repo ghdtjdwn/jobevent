@@ -1,0 +1,13 @@
+.omx/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.env*
+*.sqlite*
+.DS_Store
+.jobevent-dev/
+.vercel/
