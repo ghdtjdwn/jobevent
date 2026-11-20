@@ -1,12 +1,37 @@
 import socket
+import ssl
 from io import BytesIO
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from jobevent import imports
+
+
+def test_fetch_uses_pinned_address_and_verifies_original_host(monkeypatch):
+    host, ip = "profile.example", "8.8.8.8"
+    monkeypatch.setattr(
+        socket, "getaddrinfo", lambda *a, **kw: [(0, 0, 0, "", (ip, 443))]
+    )
+    dial = MagicMock()
+    monkeypatch.setattr(socket, "create_connection", dial)
+    tls = ssl.create_default_context()
+    wrap = Mock()
+    monkeypatch.setattr(imports.ssl, "create_default_context", lambda: tls)
+    monkeypatch.setattr(tls, "wrap_socket", wrap)
+    connection = Mock()
+    connection.return_value.getresponse.return_value.status = 200
+    connection.return_value.getresponse.return_value.read.return_value = b"profile"
+    monkeypatch.setattr(imports.http.client, "HTTPSConnection", connection)
+    assert imports.fetch(f"https://{host}/") == "profile"
+    dial.assert_called_once_with((ip, 443), timeout=10)
+    wrap.assert_called_once_with(
+        dial.return_value.__enter__.return_value, server_hostname=host
+    )
+    assert tls.minimum_version >= ssl.TLSVersion.TLSv1_2
+    assert tls.check_hostname and tls.verify_mode == ssl.CERT_REQUIRED
 
 
 def test_portfolio_import_removes_hidden_text(monkeypatch):
