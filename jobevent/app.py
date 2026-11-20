@@ -80,6 +80,7 @@ class Service:
             profile=self.store.get("profile"),
             provider=self.store.get("provider", "openai"),
             references=library.references(self.store),
+            profileLinks=library.profile_links(self.store),
             hasKey=self.store.get("configured") == "yes",
             rooms=self.store.rooms(),
             templates=TEMPLATES,
@@ -106,7 +107,7 @@ class Service:
             raise Failure("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.")
         try:
             if path == "/api/profile":
-                profile = clean(d.get("profile"), 20000)
+                profile = clean(d["profile"], 20000) if "profile" in d else None
                 old_provider = self.store.get("provider", "openai")
                 provider = d.get("provider", old_provider)
                 if not isinstance(provider, str) or provider not in MODELS:
@@ -132,7 +133,8 @@ class Service:
                     )
                 for room in self.store.rooms():
                     self.store.set("preview:" + room["id"], "")
-                self.store.set("profile", profile)
+                if profile is not None:
+                    self.store.set("profile", profile)
             elif path in ("/api/reference-save", "/api/reference-delete"):
                 delete = path.endswith("-delete")
                 library.update(self.store, d, delete)
@@ -143,10 +145,16 @@ class Service:
                         room["referenceIds"] = [i for i in ids if i != d["id"]]
                         self.store.save(room["id"], validate_room(room), room["kind"])
 
+            elif path in ("/api/profile-link-save", "/api/profile-link-delete"):
+                library.update_profile_link(self.store, d, path.endswith("-delete"))
+                for room in self.store.rooms():
+                    if room.get("includeProfileLinks", True):
+                        self.store.set("preview:" + room["id"], "")
             elif path == "/api/forget":
                 provider = self.store.get("provider", "openai")
                 self.vault.set("api" if provider == "openai" else "api:" + provider, "")
                 self.store.set("references", "[]")
+                self.store.set("profileLinks", "[]")
                 self.store.set("configured", "")
                 self.store.set("profile", "")
                 for r in self.store.rooms():
@@ -155,9 +163,14 @@ class Service:
                     r["enabled"] = False
                     self.store.save(r["id"], validate_room(r), r["kind"])
             elif path == "/api/room":
-                r = validate_room(d)
                 i = d.get("id") or uuid.uuid4().hex
                 old = self.room(i) if d.get("id") else None
+                if old and "includeProfileLinks" not in d:
+                    d = {
+                        **d,
+                        "includeProfileLinks": old.get("includeProfileLinks", True),
+                    }
+                r = validate_room(d)
                 hook = clean(d.get("hook", ""), 600)
                 kind = channel(hook) if hook else old and old["kind"]
                 if not kind:
@@ -166,10 +179,14 @@ class Service:
                     doc["id"] for doc in library.references(self.store)
                 }:
                     raise ValueError("존재하지 않는 참고 자료입니다.")
-                if r["enabled"] and not (
-                    self.store.get("configured") and library.context(self.store, r)
-                ):
-                    raise ValueError("예약을 켜려면 키와 프로필을 먼저 저장하세요.")
+                if r["enabled"] and not self.store.get("configured"):
+                    raise ValueError(
+                        "예약을 켜려면 프로필 관리 → AI 연결에서 키를 등록하세요."
+                    )
+                if r["enabled"] and not library.context(self.store, r):
+                    raise ValueError(
+                        "이 방에서 참고할 자료를 고르거나 등록한 공개 링크를 포함하세요."
+                    )
                 if hook:
                     self.vault.set(i, hook)
                 self.store.set("preview:" + i, "")

@@ -1,10 +1,8 @@
 import ipaddress
 import json
 import os
-import re
 import shutil
 from importlib.resources import files
-from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
@@ -18,7 +16,9 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from filelock import Timeout
 
-from jobevent.pipeline import Failure, public_url
+from jobevent.library import DuplicateProfileLink
+from jobevent.model import profile_link_url
+from jobevent.pipeline import Failure
 
 from .pdf import extract
 from .tenants import account_dir, mutex, quota, service_for
@@ -59,18 +59,6 @@ def client_address(request):
         except ValueError:
             pass
     return request.META.get("REMOTE_ADDR", "unknown")
-
-
-def allowed_reference(url):
-    if not public_url(url):
-        return False
-    if re.fullmatch(r"https://github\.com/[A-Za-z0-9-]+/?", url):
-        return True
-    return (
-        urlsplit(url)
-        .hostname.lower()
-        .endswith((".github.io", ".vercel.app", ".notion.site"))
-    )
 
 
 def error(msg, status):
@@ -238,6 +226,8 @@ def api(request, operation):
             return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
     if request.method != "POST" or operation not in (
         "profile",
+        "profile-link-save",
+        "profile-link-delete",
         "reference-save",
         "reference-delete",
         "room",
@@ -285,16 +275,21 @@ def api(request, operation):
                 and len(service.store.rooms()) >= 12
             ):
                 return error("계정당 알림방은 최대 12개입니다.", 400)
-            if operation == "reference" and not allowed_reference(data.get("url")):
-                return error(
-                    "공개 GitHub 사용자 링크, GitHub Pages·Vercel·Notion의 기본 도메인 페이지만 읽습니다. 다른 포트폴리오는 파일이나 텍스트로 추가하세요.",
-                    400,
-                )
+            if operation == "reference":
+                try:
+                    data["url"] = profile_link_url(data.get("url"))
+                except ValueError:
+                    return error(
+                        "공개 GitHub 사용자 주소 또는 GitHub Pages·Vercel·Notion의 공개 HTTPS 주소를 입력하세요.",
+                        400,
+                    )
             if operation == "pdf":
                 return JsonResponse({"text": extract(data.get("data"))})
             return JsonResponse(service.change("/api/" + operation, data))
     except Timeout:
         return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
+    except DuplicateProfileLink:
+        return error("이미 등록한 주소입니다. 기존 링크를 편집하세요.", 400)
     except Failure:
         if operation in ("send", "send-preview", "channel-test"):
             return error(
@@ -309,6 +304,7 @@ def api(request, operation):
         messages = {
             "pdf": "텍스트가 있는 암호 없는 40쪽 이하 PDF를 올리거나 내용을 직접 붙여넣으세요.",
             "reference": "공개 페이지를 읽을 수 없습니다. 최종 주소를 확인하거나 텍스트를 붙여넣으세요.",
+            "profile-link-save": "공개 주소와 추천에 사용할 본문(최대 6,000자)을 확인하세요.",
             "profile": "선택한 AI 제공 회사에 맞는 API 키와 프로필을 확인하세요.",
             "room": "알림방의 채널, 참고 자료와 예약 설정을 확인하세요.",
         }

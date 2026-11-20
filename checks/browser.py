@@ -40,26 +40,63 @@ def check(base, shots):
             page.locator(f'nav a[href="#{name}"]').click()
 
         nav("profile")
+        expect(
+            page.get_by_role("heading", name="프로필 관리", exact=True)
+        ).to_be_visible()
+        expect(page.locator("#legacyProfile")).to_be_hidden()
+        assert page.locator('nav a[href="#library"]').count() == 0
+        page.get_by_role("link", name="AI 연결", exact=True).click()
         page.locator("[name=provider]").select_option("google")
         expect(page.locator("#keyLink")).to_have_attribute(
             "href", "https://aistudio.google.com/apikey"
         )
         assert not page.locator("[name=model]").count()
-        page.locator("[name=profile]").fill("데이터 분석 및 개발 경험")
         page.locator("#settings .primary").click()
         expect(page.locator("#status")).to_contain_text("저장")
-        nav("library")
+        page.get_by_role("link", name="내 공개 링크", exact=True).click()
+        page.locator("#newLink").click()
+        link_form = page.locator("#profileLinkForm")
+        url = "https://github.com/workspace-example"
+        link_form.locator("[name=url]").fill(url)
+        link_form.locator("[name=text]").fill("공개 프로젝트 활동")
+        link_form.get_by_role("button", name="링크 저장").click()
+        expect(page.locator("#profileLinkList")).to_contain_text(url)
+        page.locator("#newLink").click()
+        link_form.locator("[name=url]").fill(url + "/")
+        link_form.locator("[name=text]").fill("편집 중")
+        link_form.get_by_role("button", name="링크 저장").click()
+        expect(page.locator("#status")).to_contain_text("이미 등록한 주소")
+        expect(link_form.locator("[name=text]")).to_have_value("편집 중")
+        page.locator("#cancelLink").click()
+        # Old bookmarks go directly to documents within the single profile page.
+        page.goto(base + "/app#library")
+        expect(page).to_have_url(re.compile(r"#profile/docs$"))
+        page.locator("#newRef").click()
+        assert not page.locator("#refForm input[type=url]").count()
+        page.locator("#file").set_input_files(
+            {
+                "name": "활동 이력서.txt",
+                "mimeType": "text/plain",
+                "buffer": "활동 내역".encode(),
+            }
+        )
+        expect(page.locator("#refForm [name=title]")).to_have_value("활동 이력서")
+        page.locator("#refForm .primary").click()
+        expect(page.locator("#refs")).to_contain_text("활동 이력서")
         page.locator("#newRef").click()
         page.locator("#refForm [name=title]").fill("기술 포트폴리오")
         page.locator("#refForm [name=text]").fill("공개 데이터 시각화 프로젝트")
         page.locator("#refForm .primary").click()
         expect(page.locator("#refs")).to_contain_text("기술 포트폴리오")
+        expect(page.locator("#profileLinkList article")).to_have_count(1)
         nav("rooms")
         page.locator('a[href="#new"]').first.click()
         page.locator("#room [name=name]").fill("주말 해커톤")
         page.locator("#room [name=template]").select_option("해커톤")
         page.locator("#room [name=refMode]").select_option("selected")
         page.get_by_label("기술 포트폴리오", exact=True).check()
+        expect(page.get_by_label("내 공개 링크도 참고")).to_be_checked()
+        page.get_by_label("내 공개 링크도 참고").uncheck()
         page.locator("#room [name=hook]").fill(
             "https://discord.com/api/webhooks/123/fixture"
         )
@@ -75,25 +112,40 @@ def check(base, shots):
         page.get_by_role("button", name="새 방으로 복제").click()
         assert not page.locator("#room [name=hook]").input_value()
         assert page.get_by_label("기술 포트폴리오", exact=True).is_checked()
+        expect(page.get_by_label("내 공개 링크도 참고")).not_to_be_checked()
         page.set_viewport_size({"width": 390, "height": 844})
-        for panel in ("rooms", "profile", "library", "history", "account"):
+        for panel in ("rooms", "profile", "history", "account"):
             nav(panel)
             expect(page.locator("#" + panel)).to_be_visible()
             assert page.evaluate(
                 "document.documentElement.scrollWidth <= innerWidth"
             ), panel
+            if shots and panel == "profile":
+                page.screenshot(
+                    path=shots / "profile-mobile.png", animations="disabled"
+                )
             if shots and panel == "rooms":
                 page.screenshot(path=shots / "mobile.png")
-        nav("library")
-        page.locator("#refs").get_by_role("button", name="삭제").click()
+        nav("profile")
+        page.locator("#profileLinkList").get_by_role("button", name="편집").click()
+        link_form.locator("[name=text]").fill("변경한 공통 본문")
+        link_form.get_by_role("button", name="링크 저장").click()
+        expect(page.locator("#profileLinkList")).to_contain_text("변경한 공통 본문")
+        page.locator("#refs article").filter(has_text="기술 포트폴리오").get_by_role(
+            "button", name="삭제"
+        ).click()
         expect(page.locator("#refs")).not_to_contain_text("기술 포트폴리오")
+        expect(page.locator("#profileLinkList")).to_contain_text(url)
+        page.locator("#profileLinkList").get_by_role("button", name="삭제").click()
+        expect(page.locator("#profileLinkList article")).to_have_count(0)
+        expect(page.locator("#refs")).to_contain_text("활동 이력서")
         nav("account")
         page.locator("#logout").click()
         expect(page.locator("#authForm")).to_be_visible()
         assert not errors, errors
         browser.close()
         print(
-            "실제 브라우저: 진입·가입·회사 선택·자료 추가/삭제·방 저장/복제·모바일 5화면·로그아웃 통과"
+            "실제 브라우저: 가입·프로필 통합·파일/링크 독립 관리·중복 차단·방 저장/복제·모바일 4화면·로그아웃 통과"
         )
 
 

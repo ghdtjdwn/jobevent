@@ -4,12 +4,12 @@ import json
 import re
 from datetime import datetime
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from zoneinfo import ZoneInfo
 
 from . import library
-from .model import TEMPLATE_CHECKS, TEMPLATES, channel
+from .model import TEMPLATE_CHECKS, TEMPLATES, channel, identity
 from .providers import MODELS, request_alternative
 
 
@@ -85,24 +85,6 @@ def public_url(url):
         )
     except ValueError:
         return False
-
-
-def identity(url):
-    u = urlsplit(url)
-    params = [
-        (k, v)
-        for k, v in parse_qsl(u.query, keep_blank_values=True)
-        if not k.lower().startswith("utm_") and k.lower() not in ("fbclid", "gclid")
-    ]
-    return urlunsplit(
-        (
-            "https",
-            u.netloc.lower(),
-            u.path.rstrip("/") or "/",
-            urlencode(sorted(params)),
-            "",
-        )
-    )
 
 
 def parts(output):
@@ -282,8 +264,10 @@ def run(store, vault, r, preview):
         profile = library.context(store, r)
     except ValueError as e:
         raise Failure(str(e)) from None
-    if not key or not profile:
-        raise Failure("먼저 API 키와 참고 프로필을 저장하세요.")
+    if not key:
+        raise Failure("프로필 관리 → AI 연결에서 API 키를 등록하세요.")
+    if not profile:
+        raise Failure("이 방에서 참고할 자료를 고르거나 등록한 공개 링크를 포함하세요.")
     today = datetime.now(ZoneInfo(r["zone"])).date().isoformat()
     model = MODELS[provider]
     if r.get("source", "web") == "web":
