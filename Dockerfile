@@ -1,5 +1,5 @@
 FROM ghcr.io/astral-sh/uv:0.11.25 AS uv
-FROM python:3.12-slim
+FROM python:3.15-slim
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/jobevent-venv UV_LINK_MODE=copy PATH="/opt/jobevent-venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=jobevent.hosted.settings JOBEVENT_DATA_DIR=/var/lib/jobevent
 WORKDIR /app
