@@ -30,6 +30,11 @@ def update(store, data, delete=False):
     store.set("references", json.dumps(docs, ensure_ascii=False))
 
 
+class DuplicateProfileLink(ValueError):
+    def __init__(self):
+        super().__init__("이미 등록한 주소입니다. 기존 링크를 편집하세요.")
+
+
 def profile_links(store):
     return json.loads(store.get("profileLinks", "[]"))
 
@@ -47,7 +52,7 @@ def update_profile_link(store, data, delete=False):
         body = clean(data.get("text"), 6000, True)
         marker = identity(url)
         if any(link is not row and identity(link["url"]) == marker for link in links):
-            raise ValueError("이미 등록한 주소입니다. 기존 링크를 편집하세요.")
+            raise DuplicateProfileLink()
         if row is None:
             if len(links) >= 5:
                 raise ValueError("공통 프로필 링크는 최대 5개입니다.")

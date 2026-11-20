@@ -16,6 +16,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from filelock import Timeout
 
+from jobevent.library import DuplicateProfileLink
 from jobevent.model import profile_link_url
 from jobevent.pipeline import Failure
 
@@ -275,13 +276,40 @@ def api(request, operation):
             ):
                 return error("계정당 알림방은 최대 12개입니다.", 400)
             if operation == "reference":
-                data["url"] = profile_link_url(data.get("url"))
+                try:
+                    data["url"] = profile_link_url(data.get("url"))
+                except ValueError:
+                    return error(
+                        "공개 GitHub 사용자 주소 또는 GitHub Pages·Vercel·Notion의 공개 HTTPS 주소를 입력하세요.",
+                        400,
+                    )
             if operation == "pdf":
                 return JsonResponse({"text": extract(data.get("data"))})
             return JsonResponse(service.change("/api/" + operation, data))
     except Timeout:
         return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
-    except (ValueError, Failure) as exc:
-        return error(str(exc)[:180], 400)
+    except DuplicateProfileLink:
+        return error("이미 등록한 주소입니다. 기존 링크를 편집하세요.", 400)
+    except Failure:
+        if operation in ("send", "send-preview", "channel-test"):
+            return error(
+                "발송 완료를 확인하지 못했습니다. 중복 발송을 막으려면 다시 시도하기 전에 채널을 확인하세요.",
+                400,
+            )
+        return error(
+            "연결한 서비스에서 작업을 마치지 못했습니다. API 키와 알림 채널 설정을 확인하세요.",
+            400,
+        )
+    except ValueError:
+        messages = {
+            "pdf": "텍스트가 있는 암호 없는 40쪽 이하 PDF를 올리거나 내용을 직접 붙여넣으세요.",
+            "reference": "공개 페이지를 읽을 수 없습니다. 최종 주소를 확인하거나 텍스트를 붙여넣으세요.",
+            "profile-link-save": "공개 주소와 추천에 사용할 본문(최대 6,000자)을 확인하세요.",
+            "profile": "선택한 AI 제공 회사에 맞는 API 키와 프로필을 확인하세요.",
+            "room": "알림방의 채널, 참고 자료와 예약 설정을 확인하세요.",
+        }
+        return error(
+            messages.get(operation, "입력한 내용과 선택한 항목을 확인하세요."), 400
+        )
     except Exception:
         return error("처리하지 못했습니다. 설정 또는 서버 상태를 확인하세요.", 500)
