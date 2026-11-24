@@ -49,3 +49,11 @@ jobs:
         run: |
           python3 deploy/configure.py example.org
           docker run --rm --env-file .env jobevent:ci sh -ec 'django-admin migrate --noinput && django-admin check --deploy --fail-level ERROR && django-admin runworker --once'
+      - name: Preflight like deploy/cd without production keys, network or data
+        run: |
+          printf 'JOBEVENT_ORIGIN=https://preflight.invalid\nJOBEVENT_SECRET_KEY=%s\nJOBEVENT_ENCRYPTION_KEY=%s\n' \
+            "$(head -c 64 /dev/urandom | base64 | tr -d '\n')" "$(head -c 32 /dev/urandom | base64 | tr '+/' '-_')" > "$RUNNER_TEMP/preflight.env"
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            --tmpfs /var/lib/jobevent:uid=10001,gid=10001,mode=0700 --env-file "$RUNNER_TEMP/preflight.env" jobevent:ci \
+            sh -ec 'django-admin check --deploy --fail-level ERROR >&2 && django-admin showmigrations --plan' > "$RUNNER_TEMP/plan.txt"
+          awk '{print $NF}' "$RUNNER_TEMP/plan.txt" | grep -qx 'auth.0001_initial'

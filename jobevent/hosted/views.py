@@ -135,15 +135,18 @@ def account_form(request, signup):
             return HttpResponse(
                 "시도 횟수 제한에 도달했습니다. 잠시 후 다시 시도하세요.", status=429
             )
-        if not signup and not quota(
-            "login-name", request.POST.get("username", "").casefold(), 12, 900
-        ):
+        # Only failures from this address count, so others cannot lock the owner out.
+        login_name = f"{address}:{request.POST.get('username', '').casefold()}"
+        if not signup and not quota("login-name", login_name, 12, 900, hit=False):
             return HttpResponse(
                 "시도 횟수 제한에 도달했습니다. 잠시 후 다시 시도하세요.", status=429
             )
     data = request.POST if request.method == "POST" else None
     form = UserCreationForm(data) if signup else AuthenticationForm(request, data=data)
-    if request.method == "POST" and form.is_valid():
+    valid = request.method == "POST" and form.is_valid()
+    if request.method == "POST" and not signup and not valid:
+        quota("login-name", login_name, 12, 900)
+    if valid:
         if signup:
             try:
                 with mutex("signup"):
