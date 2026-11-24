@@ -33,7 +33,7 @@ uv build
 1. 이슈를 만들고 자신을 Assignee로 지정합니다. Assignee가 지정된 이슈는 그 사람이 맡은 일이므로 상대는 손대지 않습니다. 30분 안에 끝나는 오탈자·설정 수정은 이슈 없이 PR만 올려도 됩니다.
 2. 최신 `main`에서 브랜치를 만듭니다: `git switch main && git pull --ff-only && git switch -c feat/12-room-timezone`.
 3. 의미 있는 단위로 커밋하고, 하루 이상 걸리는 작업은 Draft PR을 먼저 열어 어떤 파일을 고치는지 공유합니다.
-4. 작업이 끝나면 Ready for review로 바꿉니다. 상대에게 리뷰가 자동 요청되고 Discord로 알림이 갑니다.
+4. 작업이 끝나면 Ready for review로 바꿉니다. 상대에게 리뷰가 자동 요청됩니다.
 5. 상대의 Approve와 필수 검사 통과 후 **작성자가** Squash merge합니다. Auto-merge를 켜 두면 조건이 갖춰질 때 자동으로 병합됩니다.
 6. `main`에 병합되면 운영 배포가 자동으로 이어집니다. [병합과 배포](#병합과-배포)에서 반영을 확인합니다.
 
@@ -70,7 +70,7 @@ docs/operations-deploy-cycle
 ```text
 feat: 방마다 알림 시간대 선택
 fix: 같은 공고의 웹훅 중복 전송
-chore: Discord PR 알림 워크플로 추가
+chore: PR 제목 검사 워크플로 추가
 ```
 
 - Squash merge하므로 **PR 제목이 `main`의 커밋 제목**이 됩니다. `PR title` 검사가 형식과 길이를 확인하며, 실패하면 병합할 수 없습니다. Dependabot PR은 검사에서 제외합니다.
@@ -149,6 +149,5 @@ AI 도구를 써도 되지만 결과는 작성자가 이해하고 책임집니�
 - `main` 보호: PR 필수, 승인 1명, 새 커밋 시 승인 취소, 대화 해결 필수, 필수 검사 통과와 최신화 필수, force push·삭제 금지. 관리자만 PR을 통한 긴급 병합 가능.
 - 병합 방식: Squash merge만 허용하며 커밋 제목은 PR 제목입니다. 병합한 브랜치는 자동 삭제하고 Auto-merge를 허용합니다.
 - [CODEOWNERS](.github/CODEOWNERS)로 상대에게 리뷰를 자동 요청합니다.
-- Discord PR 알림은 저장소 secret `DISCORD_WEBHOOK_URL`이 있을 때만 보냅니다. fork와 Dependabot PR에는 secret이 전달되지 않아 알림이 가지 않습니다.
 
 GitHub 저장소 권한은 서비스 회원 권한과 무관합니다. 저장소 초대는 관리자가 GitHub에서 따로 처리합니다.
