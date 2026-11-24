@@ -1,0 +1,24 @@
+name: PR title
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions: {}
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check title format and length
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        # Squash merge가 PR 제목을 main의 커밋 제목으로 쓰므로 여기서 형식을 강제한다.
+        run: |
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then echo "Dependabot PR은 제목 규칙에서 제외합니다."; exit 0; fi
+          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|refactor|docs|test|chore): [^ ](.*[^. ])?$'; then
+            echo "::error::PR 제목은 'type: 대상과 바꿀 내용' 형식이어야 합니다. type은 feat, fix, refactor, docs, test, chore 중 하나이고 끝에 마침표를 쓰지 않습니다."
+            exit 1
+          fi
+          length=$(printf '%s' "$TITLE" | python3 -c 'import sys; print(len(sys.stdin.read()))')
+          if [ "$length" -gt 50 ]; then echo "::error::PR 제목은 50자 이하여야 합니다. 현재 ${length}자입니다."; exit 1; fi
+          echo "OK: $TITLE"
