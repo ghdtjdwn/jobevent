@@ -232,3 +232,45 @@ def test_profile_and_ai_settings_can_be_saved_independently(service):
     service.change("/api/profile", {"profile": ""})
     assert service.state()["profile"] == ""
     assert service.state()["hasKey"]
+
+
+def test_claude_paused_search_continues_and_fenced_json_parses(
+    service, room_data, monkeypatch
+):
+    service.change(
+        "/api/profile", {"provider": "anthropic", "key": "k", "profile": "x"}
+    )
+    service.change("/api/room", {**room_data, "enabled": True})
+    url = "https://example.org/one"
+    ranked = json.dumps(
+        {"items": [{"index": 0, "title": "공고", "reason": "일치", "deadline": None}]}
+    )
+    calls = []
+
+    def post(endpoint, body, *, auth_headers):
+        calls.append(json.loads(json.dumps(body)))
+        if "tools" not in body:
+            text = "```json\n" + ranked + "\n```"
+            return json.dumps(
+                {"stop_reason": "end_turn", "content": [{"type": "text", "text": text}]}
+            ).encode()
+        if len(body["messages"]) == 1:
+            return json.dumps(
+                {
+                    "stop_reason": "pause_turn",
+                    "content": [{"type": "web_search_tool_result", "content": []}],
+                }
+            ).encode()
+        cite = [{"type": "web_search_result_location", "url": url}]
+        return json.dumps(
+            {
+                "stop_reason": "end_turn",
+                "content": [{"type": "text", "text": "공고", "citations": cite}],
+            }
+        ).encode()
+
+    monkeypatch.setattr(pipeline, "post", post)
+    got = service.change("/api/preview", {"id": service.store.rooms()[0]["id"]})
+    assert got["items"][0]["url"] == url
+    assert len(calls) == 3
+    assert calls[1]["messages"][1]["role"] == "assistant"

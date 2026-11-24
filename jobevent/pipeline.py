@@ -124,7 +124,8 @@ def discover(key, model, r, today):
         },
         tools=[{"type": "web_search"}],
         tool_choice="required",
-        max_output_tokens=3200,
+        # Reasoning models spend part of this budget before any visible text.
+        max_output_tokens=16000,
     )
     if not any(
         i.get("type") == "web_search_call" and i.get("status") == "completed"
@@ -168,10 +169,12 @@ def rank(key, model, r, today, profile, notes, urls):
             "limit": r["limit"],
         },
         text={"format": {"type": "json_object"}},
-        max_output_tokens=1800,
+        max_output_tokens=8000,
     )
     try:
-        items = json.loads("".join(p["text"] for p in parts(out)))["items"]
+        text = "".join(p["text"] for p in parts(out)).strip()
+        fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", text, re.S)
+        items = json.loads(fenced[1] if fenced else text)["items"]
         if not isinstance(items, list):
             raise ValueError
         result = []

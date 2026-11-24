@@ -44,16 +44,25 @@ def request_alternative(post, key, model, instructions, payload, options):
             body["tools"] = [
                 {"type": "web_search_20250305", "name": "web_search", "max_uses": 4}
             ]
-        data = json.loads(
-            post(
-                "https://api.anthropic.com/v1/messages",
-                body,
-                auth_headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+        parts = []
+        # A server-side search loop may pause; resend the partial turn to continue.
+        for _ in range(4):
+            data = json.loads(
+                post(
+                    "https://api.anthropic.com/v1/messages",
+                    body,
+                    auth_headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+                )
             )
-        )
+            parts += data["content"]
+            if data.get("stop_reason") != "pause_turn":
+                break
+            body["messages"] = [
+                body["messages"][0],
+                {"role": "assistant", "content": parts},
+            ]
         if data.get("stop_reason") != "end_turn":
             raise Failure("Claude 응답이 완료되지 않았습니다.")
-        parts = data["content"]
         results = [p for p in parts if p["type"] == "web_search_tool_result"]
         if any(not isinstance(p.get("content"), list) for p in results):
             raise Failure("Claude 웹 검색 실패 · 검색 권한과 사용 한도를 확인하세요.")
