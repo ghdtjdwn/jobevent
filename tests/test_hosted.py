@@ -173,6 +173,8 @@ def test_browser_closed_worker_and_shared_lock(client, room_data, settings, tran
         )
         call_command("runworker", once=True)
         assert transport.calls == []
+        # A run holding the account lock must not block the dashboard.
+        assert client.get("/api/state").status_code == 200
     client.post("/logout", HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value)
     call_command("runworker", once=True)
     assert sum(urlsplit(u).hostname == "discord.com" for u, *_ in transport.calls) == 1
@@ -367,3 +369,32 @@ def test_busy_limit_database_returns_503_not_500(client, monkeypatch):
         },
     )
     assert r.status_code == 503
+
+
+def test_worker_runs_accounts_in_parallel(host, monkeypatch):
+    import threading
+
+    from django.core.management import call_command
+    from django.test import Client
+
+    from jobevent.hosted.management.commands import runworker
+    from jobevent.hosted.tenants import service_for
+
+    for _ in range(2):
+        c = Client(HTTP_HOST="127.0.0.1:8000", REMOTE_ADDR=uuid.uuid4().hex)
+        signup(c)
+        service_for(int(c.session["_auth_user_id"]))
+    barrier = threading.Barrier(2, timeout=2)
+    met = []
+
+    class Slow:
+        def tick(self):
+            try:
+                barrier.wait()
+                met.append(True)
+            except threading.BrokenBarrierError:
+                pass
+
+    monkeypatch.setattr(runworker, "service_for", lambda uid: Slow())
+    call_command("runworker", once=True)
+    assert len(met) >= 2  # two accounts waited for each other: they ran concurrently
