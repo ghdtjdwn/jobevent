@@ -206,11 +206,10 @@ def delete_account(request):
         return error("비밀번호가 일치하지 않습니다.", 400)
     try:
         with mutex(f"user-{uid}"):
-            directory = account_dir(uid)
-            if directory.exists():
-                shutil.rmtree(directory)
+            # Delete the account first so a lock-free state read cannot recreate data.
             request.user.delete()
             logout(request)
+            shutil.rmtree(account_dir(uid), ignore_errors=True)
             return redirect("/signup")
     except Timeout:
         return error("실행 중입니다. 완료 후 다시 시도하세요.", 409)
@@ -223,19 +222,20 @@ def api(request, operation):
         return error("로그인이 필요합니다.", 401)
     uid = request.user.pk
     if operation == "state" and request.method == "GET":
-        try:
-            with mutex(f"user-{uid}"):
-                if not get_user_model().objects.filter(pk=uid, is_active=True).exists():
-                    return error("로그인이 필요합니다.", 401)
-                return JsonResponse(
-                    {
-                        **service_for(uid).state(),
-                        "hosted": True,
-                        "username": request.user.get_username(),
-                    }
-                )
-        except Timeout:
-            return error("다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.", 409)
+        # Read without the account lock: a scheduled run may hold it for minutes.
+        active = get_user_model().objects.filter(pk=uid, is_active=True)
+        if not active.exists():
+            return error("로그인이 필요합니다.", 401)
+        body = {
+            **service_for(uid).state(),
+            "hosted": True,
+            "username": request.user.get_username(),
+        }
+        if not active.exists():
+            # Deleted while reading: never leave a recreated account directory behind.
+            shutil.rmtree(account_dir(uid), ignore_errors=True)
+            return error("로그인이 필요합니다.", 401)
+        return JsonResponse(body)
     if request.method != "POST" or operation not in (
         "profile",
         "profile-link-save",

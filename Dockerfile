@@ -10,4 +10,5 @@ ARG JOBEVENT_REVISION=development
 ENV JOBEVENT_REVISION=$JOBEVENT_REVISION
 USER 10001:10001
 EXPOSE 8000
-CMD ["gunicorn","jobevent.hosted.wsgi:application","--bind","0.0.0.0:8000","--workers","2","--threads","2","--timeout","300"]
+# Requests mostly wait on AI/webhook I/O. shortcut: 32 thread slots, move runs to the worker queue if manual runs start to queue logins.
+CMD ["gunicorn","jobevent.hosted.wsgi:application","--bind","0.0.0.0:8000","--workers","2","--threads","16","--timeout","300"]
