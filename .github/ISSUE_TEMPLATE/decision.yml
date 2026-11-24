@@ -1,0 +1,42 @@
+name: 논의
+description: '둘이 정해야 하는 제품·설계·운영 결정을 기록합니다. 제목은 type 없이 `<대상>의 <정할 내용> 결정` 형식으로 씁니다.'
+labels: [question]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경
+      description: 현재 기준과 결정이 필요한 이유를 4문장 이하로 씁니다.
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: 결정할 내용
+      description: '`<대상>을 <무엇>으로 할지 정합니다.` 문장에 번호를 붙여 씁니다. 선택지는 하위 목록에 `<선택지>: <결과>`로 씁니다.'
+      value: |
+        1. <대상>을 <무엇>으로 할지 정합니다.
+           - <선택지>: <결과>
+           - <선택지>: <결과>
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 관련 이슈, PR, 문서 절의 링크를 씁니다. 없으면 `없음`과 이유를 씁니다.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 논의 결과
+      description: 논의를 마친 뒤 채웁니다. 결정이 바뀌면 이 기록을 고치지 않고 새 논의 이슈를 만듭니다.
+      value: |
+        - 결정:
+        - 이유:
+        - 검토한 선택지:
+        - 영향 범위:
+        - 반영 PR:
+    validations:
+      required: false

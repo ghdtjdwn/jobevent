@@ -1,0 +1,34 @@
+name: 작업
+description: '기능, 개선, 문서, 설정과 리팩터링 작업을 등록합니다. 제목은 `type: 대상과 바꿀 내용` 형식으로 50자 이하로 씁니다.'
+title: 'feat: '
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 작업 배경
+      description: 작업이 필요한 이유를 3문장 이하로 씁니다. 기존 이슈, 문서, 논의 결과는 다시 쓰지 않고 링크합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 작업 범위
+      description: 포함하는 일과 제외하는 일을 씁니다. 구현 방식은 범위나 판단에 영향을 줄 때만 씁니다.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 조건
+      description: 통과와 실패를 가를 수 있는 동작을 체크박스 문장으로 씁니다. `기능 구현 완료`, `테스트 완료`는 쓰지 않습니다. 운영 배포 뒤에만 확인할 수 있는 동작도 씁니다. 조건이 8개를 넘으면 이슈를 나눕니다.
+      value: |
+        - [ ] <조건>하면 <대상>은 <결과>합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: '관련 이슈, PR, 문서를 `<종류>: <링크>` 형식으로 씁니다. 없으면 `없음`과 이유를 씁니다.'
+    validations:
+      required: true
