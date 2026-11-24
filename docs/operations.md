@@ -21,7 +21,7 @@ curl --fail https://alerts.example.org/healthz
 
 ## 자동 배포 (공유 서버)
 
-앱 화면·API·워커는 하나의 이미지입니다. 서버는 약 2분 주기로 공개 저장소 main을 확인하고 해당 SHA의 **push CI 성공**이 확인될 때만 새 이미지를 빌드합니다. PR·포크 코드를 운영 서버에서 실행하지 않으며 GitHub에 SSH 키/운영 API 키를 저장하지 않습니다. 웹훅 수신 포트를 추가하지 않습니다.
+앱 화면·API·워커는 하나의 이미지입니다. 서버는 약 3분 주기로 공개 저장소 main을 확인하고 해당 SHA의 **push CI 성공**이 확인될 때만 새 이미지를 빌드합니다. PR·포크 코드를 운영 서버에서 실행하지 않으며 GitHub에 SSH 키/운영 API 키를 저장하지 않습니다. 웹훅 수신 포트를 추가하지 않습니다.
 
 - 신뢰 경계: 배포 스크립트와 systemd 설정은 운영자가 검토 후 별도 설치합니다. 매 배포 시 Git에서 내려받은 스크립트를 root로 재설치하지 않습니다. 기존 호스트의 Compose·키·HTTPS 프록시·데이터 볼륨은 보존합니다.
 - 구성: `deploy/cd/pull-release.sh` → `/usr/local/libexec/jobevent-cd`, `deploy/cd/jobevent-cd.{service,timer}` → systemd. `/etc/jobevent-cd.conf`에 기존 스택 경로(JOBEVENT_STACK_DIR), 배포 기록 파일(JOBEVENT_REVISION_FILE), 공개 HTTPS 상태 주소(JOBEVENT_HEALTH_URL)를 설정합니다. 구성에는 사용자 키를 넣지 않습니다.
@@ -29,3 +29,5 @@ curl --fail https://alerts.example.org/healthz
 - 전환 후 외부 healthz의 SHA·worker의 이미지와 실행 상태를 두 번 확인합니다. 실패하면 이전 이미지로 되돌리고 해당 SHA는 재시도하지 않습니다. 이 롤백은 볼륨이나 DB를 되돌리지 않습니다.
 - 점검: `systemctl status jobevent-cd.timer`, `journalctl -u jobevent-cd.service`, 공개 `/healthz`, GitHub Actions의 Production delivery. 장애 시 먼저 타이머를 멈추고 이전 이미지, 두 서비스 상태, 데이터 무결성을 확인합니다. 원인을 해결한 뒤에만 실패 표식을 해제하고 재시작합니다.
 - 매주 ARM64 이미지의 실제 설치 패키지를 다시 검사합니다. 이 감사는 Python 패키지의 알려진 취약점 검사이며 OS·프록시·하루 사이의 신규 공개 취약점까지 전부 보증하지 않습니다.
+
+Vercel 프로젝트는 같은 저장소의 `deploy/entry`만 배포하는 Git 연동입니다. 실제 앱/API/워커는 OCI에서 실행되고, Vercel에는 사용자 키·운영 SSH 키를 저장하지 않습니다.
