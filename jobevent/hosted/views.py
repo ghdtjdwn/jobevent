@@ -162,6 +162,14 @@ def account_form(request, signup):
                     if get_user_model().objects.count() >= settings.MAX_ACCOUNTS:
                         message = "현재 서버의 가입 한도에 도달했습니다."
                         status = 429
+                    elif not quota(
+                        "signup-day", "all", settings.DAILY_SIGNUPS, 86400, hit=False
+                    ):
+                        # Rotating addresses must not fill the whole beta in one day.
+                        message = (
+                            "오늘 가입 가능한 인원이 찼습니다. 내일 다시 시도하세요."
+                        )
+                        status = 429
                     elif (
                         get_user_model()
                         .objects.filter(username=form.cleaned_data["username"])
@@ -171,6 +179,7 @@ def account_form(request, signup):
                         status = 400
                     else:
                         user = form.save()
+                        quota("signup-day", "all", settings.DAILY_SIGNUPS, 86400)
             except Timeout:
                 return HttpResponse(
                     "다른 가입 처리 중입니다. 잠시 후 다시 시도하세요.", status=409

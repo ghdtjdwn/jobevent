@@ -398,3 +398,20 @@ def test_worker_runs_accounts_in_parallel(host, monkeypatch):
     monkeypatch.setattr(runworker, "service_for", lambda uid: Slow())
     call_command("runworker", once=True)
     assert len(met) >= 2  # two accounts waited for each other: they ran concurrently
+
+
+def test_daily_signup_cap_survives_address_rotation(client):
+    from django.test import override_settings
+
+    client.get("/signup")
+    with override_settings(DAILY_SIGNUPS=0):
+        r = client.post(
+            "/signup",
+            {
+                "username": "account-" + uuid.uuid4().hex[:12],
+                "password1": "a-Long-unique-pass-42",
+                "password2": "a-Long-unique-pass-42",
+                "csrfmiddlewaretoken": client.cookies["csrftoken"].value,
+            },
+        )
+    assert r.status_code == 429

@@ -140,12 +140,16 @@ def check(base, shots):
         expect(page.locator("#profileLinkList article")).to_have_count(0)
         expect(page.locator("#refs")).to_contain_text("활동 이력서")
         nav("account")
+        page.locator(".destructive summary").click()
+        page.locator("#deleteAccount [name=password]").fill("wrong-password")
+        page.locator("#deleteAccount button").click()
+        expect(page.locator("#status")).to_contain_text("비밀번호가 일치하지 않습니다")
         page.locator("#logout").click()
         expect(page.locator("#authForm")).to_be_visible()
         assert not errors, errors
         browser.close()
         print(
-            "실제 브라우저: 가입·프로필 통합·파일/링크 독립 관리·중복 차단·방 저장/복제·모바일 4화면·로그아웃 통과"
+            "실제 브라우저: 가입·프로필 통합·파일/링크 독립 관리·중복 차단·방 저장/복제·모바일 4화면·탈퇴 오류 안내·로그아웃 통과"
         )
 
 
