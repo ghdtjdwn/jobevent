@@ -130,3 +130,24 @@ def test_slack_structured_text_and_source_link(transport):
     assert key is None
     assert body["blocks"][0]["text"]["type"] == "plain_text"
     assert "&amp;" in body["blocks"][1]["text"]["text"]
+
+
+def test_contacts_never_reach_ranking_or_the_channel(
+    service, configured, settings, transport
+):
+    service.change(
+        "/api/profile",
+        {
+            "profile": "백엔드 지망 · me@example.com · 010-1234-5678 · https://me.example"
+        },
+    )
+    transport.urls.append("https://opportunities.example/contest/2")
+    transport.items = [
+        {**transport.items[0], "reason": "me@example.com 으로 연락하세요"},
+        {**transport.items[0], "index": 1, "check": "마감 2026-12-31 확인"},
+    ]
+    items = service.change("/api/send", {"id": configured["id"]})["items"]
+    assert [i["url"] for i in items] == [transport.urls[1]]
+    ranking = json.loads(transport.calls[1][1]["input"])["profile"]
+    assert all(s not in ranking for s in ("me@example.com", "010-1234", "me.example"))
+    assert "백엔드 지망" in ranking

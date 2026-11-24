@@ -325,3 +325,24 @@ def test_proxy_address_requires_operator_trust(host):
         assert client_address(req) == "192.0.2.1"
         req.META["HTTP_X_REAL_IP"] = "not an IP address"
         assert client_address(req) == "10.0.0.7"
+
+
+def test_failed_logins_elsewhere_cannot_lock_out_the_owner(host):
+    from django.test import Client
+
+    def attempt(address, username, password):
+        c = Client(HTTP_HOST="127.0.0.1:8000", REMOTE_ADDR=address)
+        c.get("/signin")
+        return c.post("/signin", {"username": username, "password": password})
+
+    owner = Client(HTTP_HOST="127.0.0.1:8000", REMOTE_ADDR=uuid.uuid4().hex)
+    username, password = signup(owner)
+    attacker = uuid.uuid4().hex
+    assert [attempt(attacker, username, "wrong").status_code for _ in range(12)] == [
+        200
+    ] * 12
+    assert attempt(attacker, username, password).status_code == 429
+    assert attempt(uuid.uuid4().hex, username, password).status_code == 302
+    # Successful logins never use up the failure budget.
+    home = uuid.uuid4().hex
+    assert {attempt(home, username, password).status_code for _ in range(13)} == {302}

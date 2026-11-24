@@ -28,11 +28,18 @@ candidate=jobevent:cd-candidate
 if ! docker build --build-arg "JOBEVENT_REVISION=$sha" -t "$candidate" "$tmp"; then
   echo "$sha" > failed; echo "Candidate build failed; previous release remains active." >&2; exit 1
 fi
-printf 'services:\n  web:\n    image: %s\n' "$candidate" > "$tmp/preflight.yaml"
-# Never apply a new schema to live data automatically.
-if ! "${compose[@]}" -f "$tmp/preflight.yaml" run -T --rm --no-deps web sh -ec 'django-admin check --deploy --fail-level ERROR && django-admin migrate --check'; then
-  echo "$sha" > failed; echo "Candidate preflight failed; previous release remains active; review migration/configuration." >&2; exit 1
-fi
+reject() { echo "$sha" > failed; echo "$1; previous release remains active." >&2; exit 1; }
+# A candidate may still be rejected: inspect it with throwaway keys, no network and no live volume.
+printf 'JOBEVENT_ORIGIN=https://preflight.invalid\nJOBEVENT_SECRET_KEY=%s\nJOBEVENT_ENCRYPTION_KEY=%s\n' \
+  "$(head -c 64 /dev/urandom | base64 | tr -d '\n')" "$(head -c 32 /dev/urandom | base64 | tr '+/' '-_')" > "$tmp/preflight.env"
+wanted=$(docker run --rm --network none --read-only --tmpfs /tmp \
+  --tmpfs /var/lib/jobevent:uid=10001,gid=10001,mode=0700 --env-file "$tmp/preflight.env" "$candidate" \
+  sh -ec 'django-admin check --deploy --fail-level ERROR >&2 && django-admin showmigrations --plan') ||
+  reject "Candidate configuration check failed"
+# Never apply a new schema to live data automatically. The running (trusted) release reads what is applied.
+applied=$("${compose[@]}" exec -T web django-admin showmigrations --plan)
+missing=$(comm -13 <(awk '$1=="[X]"{print $NF}' <<<"$applied" | sort) <(awk '{print $NF}' <<<"$wanted" | sort))
+[[ -z $missing ]] || reject "Candidate needs unapplied migrations: $(tr '\n' ' ' <<<"$missing")"
 [[ $(tip) == "$sha" ]] || exit 0
 previous=$(docker inspect --format '{{.Image}}' "$("${compose[@]}" ps -q web)")
 docker tag "$previous" jobevent:previous

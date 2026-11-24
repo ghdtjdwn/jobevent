@@ -77,8 +77,10 @@ def service_for(uid):
     return Service(store, HostedVault(store))
 
 
-def quota(scope, subject, maximum, window):
-    """Atomic fixed-window counter, shared by all web processes. No raw IP stored."""
+def quota(scope, subject, maximum, window, hit=True):
+    """Atomic fixed-window counter, shared by all web processes. No raw IP stored.
+
+    hit=False only checks the window, so a caller can count failures alone."""
     current = int(time.time()) // window
     ident = hmac.new(
         settings.SECRET_KEY.encode(), f"{scope}:{subject}".encode(), hashlib.sha256
@@ -97,6 +99,8 @@ def quota(scope, subject, maximum, window):
         ).fetchone()
         if row and row[0] >= maximum:
             return False
+        if not hit:
+            return True
         db.execute(
             "INSERT OR REPLACE INTO buckets VALUES(?,?,?,?)",
             (ident, current, (current + 1) * window, (row[0] if row else 0) + 1),

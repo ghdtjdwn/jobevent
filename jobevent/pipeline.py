@@ -87,6 +87,19 @@ def public_url(url):
         return False
 
 
+# Contacts and links are never needed to explain fit; a channel may have many members.
+CONTACT = re.compile(
+    r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+    r"|(?:\+\d{1,3}[\s.-]?)?0?\d{1,2}[\s.-]?\d{3,4}[\s.-]?\d{4}"
+    r"|https?://\S+|www\.\S+",
+    re.I,
+)
+
+
+def redact(text):
+    return CONTACT.sub("[생략]", text)
+
+
 def parts(output):
     return [
         p
@@ -145,7 +158,7 @@ def rank(key, model, r, today, profile, notes, urls):
         "Rank by fit; use requested tone. Write in Korean. Explain fit in generic skill terms; NEVER disclose personal details, names, URLs or contacts from the profile. No links or markdown in title/reason.",
         {
             "today": today,
-            "profile": profile,
+            "profile": redact(profile),
             "private_preferences": r["preferences"],
             "criteria": r["query"],
             "verify": TEMPLATE_CHECKS[r["template"]],
@@ -177,6 +190,8 @@ def rank(key, model, r, today, profile, notes, urls):
             check = item.get("check", "")
             if not isinstance(check, str):
                 raise ValueError
+            if any(CONTACT.search(s) for s in (title, reason, check)):
+                continue  # possibly echoed from the profile or an injected page
             result.append(
                 dict(
                     title=title.strip()[:120],
