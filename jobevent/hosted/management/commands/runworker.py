@@ -30,10 +30,10 @@ class Command(BaseCommand):
                             service_for(uid).tick()
                 except Timeout:
                     continue  # concurrent edit, run, deletion, or another worker
-                except Exception:
+                except Exception as e:
                     # Never echo profile, webhook or provider exception. Other accounts still run.
                     self.stderr.write(
-                        "계정 예약 처리 실패 · 데이터 볼륨과 암호화 키를 확인하세요."
+                        f"계정 예약 처리 실패 · user={uid} error={type(e).__name__} · 데이터 볼륨과 암호화 키를 확인하세요."
                     )
             if opts["once"]:
                 return

@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .model import next_due
 
+SCHEDULE = ("time", "days", "zone", "enabled")
+
 
 class Store:
     def __init__(self, directory):
@@ -50,9 +52,15 @@ class Store:
 
     def save(self, i, r, kind):
         with self.db() as db:
+            row = db.execute("SELECT config,due FROM rooms WHERE id=?", (i,)).fetchone()
+            # Editing a name or query must not drop a due (possibly missed) run.
+            if row and all(json.loads(row[0]).get(k) == r.get(k) for k in SCHEDULE):
+                due = row[1]
+            else:
+                due = next_due(r, time.time())
             db.execute(
                 "INSERT INTO rooms VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET config=excluded.config,kind=excluded.kind,due=excluded.due",
-                (i, json.dumps(r), kind, next_due(r, time.time())),
+                (i, json.dumps(r), kind, due),
             )
 
     def delete(self, i):
@@ -77,6 +85,10 @@ class Store:
     def delivered(self, i, url):
         with self.db() as db:
             db.execute("INSERT OR IGNORE INTO sent VALUES(?,?)", (i, url))
+
+    def undeliver(self, i, url):
+        with self.db() as db:
+            db.execute("DELETE FROM sent WHERE room=? AND url=?", (i, url))
 
     def log(self, i, msg):
         with self.db() as db:

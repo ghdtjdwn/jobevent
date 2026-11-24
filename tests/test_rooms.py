@@ -99,3 +99,58 @@ def test_overdue_schedule_runs_once_and_advances(
 def test_webhook_requires_canonical_provider_url(url):
     with pytest.raises(ValueError):
         channel(url)
+
+
+def test_editing_a_missed_room_keeps_its_run_and_restart_mid_run_retries(
+    service, configured, room_data, transport, monkeypatch
+):
+    import time
+
+    from jobevent import app
+
+    enabled = {**room_data, "enabled": True, "id": configured["id"]}
+    service.change("/api/room", enabled)
+    old_due = service.room(configured["id"])["due"]
+    monkeypatch.setattr(time, "time", lambda: old_due + 3600)
+    service.change("/api/room", {**enabled, "name": "이름만 변경"})
+    assert service.room(configured["id"])["due"] == old_due
+    service.change("/api/room", {**enabled, "time": "11:00"})
+    assert service.room(configured["id"])["due"] > old_due + 3600
+
+    with service.store.db() as db:
+        db.execute("UPDATE rooms SET due=?", (old_due,))
+    seen = []
+    monkeypatch.setattr(
+        app,
+        "run",
+        lambda store, vault, r, preview: (
+            seen.append(service.room(r["id"])["due"]) or []
+        ),
+    )
+    service.tick()
+    assert seen == [old_due]  # still due while running: a crash here retries once
+    assert service.room(configured["id"])["due"] > old_due + 3600
+
+
+def test_crash_after_channel_accepted_never_resends(
+    service, configured, transport, monkeypatch
+):
+    from jobevent import pipeline
+
+    def accepted_then_crash(hook, item):
+        raise RuntimeError("process died after the channel accepted")
+
+    monkeypatch.setattr(pipeline, "deliver", accepted_then_crash)
+    with pytest.raises(Exception):
+        service.change("/api/send", {"id": configured["id"]})
+    monkeypatch.undo()
+    monkeypatch.setattr(pipeline, "post", transport)
+    assert service.change("/api/send", {"id": configured["id"]})["items"] == []
+
+
+def test_forget_removes_every_provider_key(service, configured):
+    service.change("/api/profile", {"provider": "anthropic", "key": "unit-a"})
+    service.vault.set("api", "stale-openai-key")
+    service.change("/api/forget", {})
+    assert not [k for k in service.vault if k.startswith("api")]
+    assert configured["id"] in service.vault  # channel webhooks stay

@@ -346,3 +346,24 @@ def test_failed_logins_elsewhere_cannot_lock_out_the_owner(host):
     # Successful logins never use up the failure budget.
     home = uuid.uuid4().hex
     assert {attempt(home, username, password).status_code for _ in range(13)} == {302}
+
+
+def test_busy_limit_database_returns_503_not_500(client, monkeypatch):
+    import sqlite3
+
+    from jobevent.hosted import views
+
+    def locked(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    client.get("/signin")
+    monkeypatch.setattr(views, "quota", locked)
+    r = client.post(
+        "/signin",
+        {
+            "username": "x",
+            "password": "y",
+            "csrfmiddlewaretoken": client.cookies["csrftoken"].value,
+        },
+    )
+    assert r.status_code == 503

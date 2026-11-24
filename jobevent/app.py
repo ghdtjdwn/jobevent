@@ -3,6 +3,7 @@
 import argparse
 import base64
 import json
+import logging
 import os
 import threading
 import time
@@ -20,6 +21,8 @@ from .model import TEMPLATE_CHECKS, TEMPLATES, channel, clean, validate_room
 from .pipeline import Failure, check_channel, run, send_items
 from .providers import MODELS
 from .store import Store, Vault
+
+log = logging.getLogger("jobevent")
 
 
 class Service:
@@ -42,6 +45,13 @@ class Service:
                 str(e)
                 if isinstance(e, Failure)
                 else "실행 실패 · 자격 증명 저장소 또는 외부 서비스 응답을 확인하세요."
+            )
+            # Failure text is safe by contract; other exceptions may carry secrets.
+            log.warning(
+                "run failed provider=%s error=%s %s",
+                self.store.get("provider", "openai"),
+                type(e).__name__,
+                msg if isinstance(e, Failure) else "",
             )
             self.store.log(r["id"], msg)
             raise Failure(msg) from None
@@ -67,11 +77,13 @@ class Service:
         try:
             for r in self.store.rooms():
                 if r["enabled"] and r["due"] <= time.time():
-                    self.store.advance(r)
+                    # Advance only after the run, so a restart mid-run retries it once.
                     try:
                         self.execute(r, False)
                     except Failure:
                         pass
+                    finally:
+                        self.store.advance(r)
         finally:
             self.lock.release()
 
@@ -151,8 +163,10 @@ class Service:
                     if room.get("includeProfileLinks", True):
                         self.store.set("preview:" + room["id"], "")
             elif path == "/api/forget":
-                provider = self.store.get("provider", "openai")
-                self.vault.set("api" if provider == "openai" else "api:" + provider, "")
+                for provider in MODELS:
+                    self.vault.set(
+                        "api" if provider == "openai" else "api:" + provider, ""
+                    )
                 self.store.set("references", "[]")
                 self.store.set("profileLinks", "[]")
                 self.store.set("configured", "")
