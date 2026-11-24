@@ -93,6 +93,7 @@ AUTH_PASSWORD_VALIDATORS = [
     )
 ]
 MAX_ACCOUNTS = int(os.environ.get("JOBEVENT_MAX_ACCOUNTS", "100"))
+DAILY_SIGNUPS = int(os.environ.get("JOBEVENT_DAILY_SIGNUPS", "30"))
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

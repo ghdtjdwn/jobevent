@@ -842,9 +842,17 @@ function accountPost(path, values = {}) {
 $("#logout").onclick = () => accountPost("/logout");
 $("#deleteAccount").onsubmit = (e) => {
   e.preventDefault();
+  const password = e.currentTarget.elements.password.value;
   if (confirm("계정과 저장한 모든 데이터를 영구 삭제할까요?"))
-    accountPost("/account/delete", {
-      password: e.currentTarget.elements.password.value,
+    task(async () => {
+      const r = await fetch("/account/delete", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf() },
+        body: new URLSearchParams({ password }),
+      });
+      if (r.redirected || r.ok) return location.assign("/signup");
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || "계정을 삭제하지 못했습니다.");
     });
 };
 load(true).catch((e) => {
