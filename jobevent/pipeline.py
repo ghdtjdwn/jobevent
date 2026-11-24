@@ -266,8 +266,13 @@ def send_items(store, vault, r, items):
         hook = vault.get(r["id"])
         if not hook:
             raise Failure("웹훅을 다시 등록하세요.")
-        deliver(hook, item)
+        # Record first: a crash after the channel accepted must not resend next run.
         store.delivered(r["id"], marker)
+        try:
+            deliver(hook, item)
+        except Failure:
+            store.undeliver(r["id"], marker)
+            raise
         sent.append(item)
     return sent
 

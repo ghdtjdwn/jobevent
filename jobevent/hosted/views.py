@@ -1,7 +1,9 @@
 import ipaddress
 import json
+import logging
 import os
 import shutil
+import sqlite3
 from importlib.resources import files
 
 from django.conf import settings
@@ -22,6 +24,8 @@ from jobevent.pipeline import Failure
 
 from .pdf import extract
 from .tenants import account_dir, mutex, quota, service_for
+
+log = logging.getLogger("jobevent")
 
 
 class ResponsePolicy:
@@ -50,6 +54,11 @@ class ResponsePolicy:
             "default-src 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"
         )
         return response
+
+    def process_exception(self, request, exception):
+        if isinstance(exception, sqlite3.OperationalError):
+            log.warning("busy path=%s error=%s", request.path, exception)
+            return error("요청이 몰렸습니다. 잠시 후 다시 시도하세요.", 503)
 
 
 def client_address(request):
@@ -314,5 +323,7 @@ def api(request, operation):
         return error(
             messages.get(operation, "입력한 내용과 선택한 항목을 확인하세요."), 400
         )
-    except Exception:
+    except Exception as e:
+        # Class name only: messages and tracebacks may contain keys or profile text.
+        log.error("api failed op=%s user=%s error=%s", operation, uid, type(e).__name__)
         return error("처리하지 못했습니다. 설정 또는 서버 상태를 확인하세요.", 500)
