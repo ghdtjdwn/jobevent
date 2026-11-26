@@ -233,9 +233,8 @@ def check_channel(hook):
 
 def deliver(hook, item):
     url = item["url"]
-    summary = (
-        f"{item['title']}\n{item['reason']}\n마감: {item['deadline'] or '원문 확인'}"
-    )
+    # Channel members must be able to tell the alert is an AI recommendation.
+    summary = f"[AI 추천] {item['title']}\n{item['reason']}\n마감: {item['deadline'] or '원문 확인'}"
     if item.get("check"):
         summary += "\n확인할 조건: " + item["check"]
     escaped = url.replace("&", "&amp;").replace("|", "%7C")
