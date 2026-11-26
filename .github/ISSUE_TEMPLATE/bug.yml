@@ -5,7 +5,7 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: 실제 API 키, 웹훅 URL, 이력서, 계정 정보, 운영 로그 원문은 첨부하지 마세요. 보안 문제는 [비공개 보안 신고](https://github.com/ghdtjdwn/jobevent/security/advisories/new)를 이용하세요.
+      value: 실제 API 키, 웹훅 URL, 이력서, 실행 기록 원문은 첨부하지 마세요. 보안 문제는 [비공개 보안 신고](https://github.com/ghdtjdwn/jobevent/security/advisories/new)를 이용하세요.
   - type: textarea
     id: description
     attributes:
@@ -43,7 +43,7 @@ body:
     id: environment
     attributes:
       label: 발생 환경
-      description: 공개 서비스/로컬 개발 서버/로컬 단일 사용자 모드, 커밋 SHA, 브라우저와 기기처럼 확인한 정보를 목록으로 씁니다.
+      description: Jobevent 버전(릴리스 태그 또는 커밋 SHA), 설치 방법(`uv tool install` 또는 저장소에서 `uv run`), 운영체제, AI 제공 회사, 브라우저처럼 확인한 정보를 목록으로 씁니다.
     validations:
       required: false
   - type: textarea

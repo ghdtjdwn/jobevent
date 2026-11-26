@@ -1,6 +1,6 @@
 # 에이전트 작업 가이드
 
-Python 3.11+, Django, SQLite, 독립 워커로 된 공개 저장소입니다. 사람과 에이전트 모두 [CONTRIBUTING.md](CONTRIBUTING.md)의 브랜치, 커밋, 이슈, PR, 리뷰 규칙을 따릅니다. 이 문서는 에이전트가 자주 어기는 규칙만 요약합니다.
+Python 3.11+, 표준 라이브러리 HTTP 서버, SQLite, keyring으로 된 로컬 설치형 앱의 공개 저장소입니다. 사람과 에이전트 모두 [CONTRIBUTING.md](CONTRIBUTING.md)의 브랜치, 커밋, 이슈, PR, 리뷰 규칙을 따릅니다. 이 문서는 에이전트가 자주 어기는 규칙만 요약합니다.
 
 ## 작업 전
 
