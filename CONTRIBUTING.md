@@ -13,7 +13,7 @@ jobevent는 유지보수자 두 명([@ghdtjdwn](https://github.com/ghdtjdwn), [@
 ## 개발 환경
 
 1. Python 3.11 이상과 [uv](https://docs.astral.sh/uv/)를 사용합니다.
-2. `uv sync --locked` → `uv run jobevent`로 실행합니다. 이 명령은 실제 `~/.jobevent`와 OS 자격 증명 저장소를 씁니다. 개인 데이터와 분리하려면 `HOME="$(mktemp -d)" .venv/bin/jobevent --port 8766`처럼 임시 홈 폴더로 실행합니다. 키·웹훅은 데이터 폴더 경로마다 다른 자격 증명 항목으로 저장됩니다.
+2. `uv sync --locked` → `uv run jobevent`로 실행합니다. 이 명령은 실제 `~/.jobevent`와 OS 자격 증명 저장소를 쓰므로, 개발 중에는 합성 자료와 지출 한도를 건 개발용 키, 테스트 채널의 웹훅만 넣습니다. 단위 테스트와 브라우저 검사는 임시 데이터와 메모리 자격 증명 저장소만 씁니다.
 3. PR을 올리기 전에 다음 검사를 실행합니다. CI도 같은 검사를 실행합니다.
 
 ```sh
@@ -159,6 +159,6 @@ AI 도구를 써도 되지만 결과는 작성자가 이해하고 책임집니�
 
 다음 설정이 적용돼 있습니다. 바꾸려면 논의 이슈로 먼저 합의합니다.
 
-- `main` 보호: PR 필수, 승인 1명, 새 커밋 시 승인 취소, 대화 해결 필수, 필수 검사(`test (3.11)`, `test (3.12)`, `pr-title`) 통과와 최신화 필수, force push·삭제 금지.
+- `main` 보호: PR 필수, 승인 1명, 새 커밋 시 승인 취소, 대화 해결 필수, 필수 검사(`test (3.11)`, `test (3.12)`, `pr-title`) 통과와 최신화 필수, force push·삭제 금지. 저장소 관리자 역할은 PR을 거칠 때만 이 규칙을 우회할 수 있습니다.
 - 병합 방식: Squash merge만 허용하며 커밋 제목은 PR 제목입니다. 병합한 브랜치는 자동 삭제하고 Auto-merge를 허용합니다.
 - [CODEOWNERS](.github/CODEOWNERS)로 상대에게 리뷰를 자동 요청합니다.

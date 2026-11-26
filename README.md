@@ -1,6 +1,6 @@
 # Jobevent
 
-**내 PC에서 내 AI 키로 돌리는, 목적별 공고 알림방 오픈소스.** 채용·인턴·동아리·공모전·해커톤처럼 받고 싶은 기회마다 알림방을 만들면, Jobevent가 정한 요일과 시각에 공고를 찾아 고른 뒤 Discord·Slack 채널로 보냅니다. 서버나 회원가입이 없고, 데이터와 키는 설치한 PC에만 저장됩니다.
+**내 PC에서 내 AI 키로 돌리는, 목적별 공고 알림방 오픈소스.** 채용·인턴·동아리·공모전·해커톤처럼 받고 싶은 기회마다 알림방을 만들면, 내가 정한 요일과 시각에 Jobevent가 공고를 찾아 고른 뒤 Discord·Slack 채널로 보냅니다. 서버나 회원가입이 없고, 데이터와 키는 설치한 PC에만 저장됩니다.
 
 ```sh
 uv tool install git+https://github.com/ghdtjdwn/jobevent@v0.2.0
@@ -15,7 +15,7 @@ GitHub에서 직접 설치해 쓰는 개발자·개발 직군 학생을 대상�
 
 1. 위의 `uv tool install` 명령으로 설치합니다. 태그는 [릴리스 목록](https://github.com/ghdtjdwn/jobevent/releases)에서 고릅니다.
 2. `jobevent`를 실행하면 브라우저에서 `http://127.0.0.1:8765`가 열립니다. 브라우저를 열지 않으려면 `jobevent --no-browser`, 포트를 바꾸려면 `--port 8766`을 씁니다.
-3. 업데이트는 같은 명령을 새 태그로 다시 실행합니다(`uv tool install git+https://github.com/ghdtjdwn/jobevent@<새 태그>`). 삭제는 `uv tool uninstall jobevent`입니다.
+3. 업데이트는 같은 명령을 새 태그로 다시 실행합니다(`uv tool install git+https://github.com/ghdtjdwn/jobevent@<새 태그>`). 프로그램 삭제는 `uv tool uninstall jobevent`이며, 저장한 자료·키·웹훅은 남으므로 [데이터 삭제 방법](SECURITY.md)을 따라 먼저 지우세요.
 
 화면은 이 PC(127.0.0.1)에서만 열립니다. 같은 PC에서 두 번 실행할 수 없습니다.
 
