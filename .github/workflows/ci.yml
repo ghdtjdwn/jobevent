@@ -26,7 +26,7 @@ jobs:
       - run: uv run ruff check . && uv run ruff format --check .
       - run: node --check jobevent/static/app.js
       - run: uv run pytest -q
-      - name: Browser workflow (isolated account, no external AI or webhook)
+      - name: Browser workflow (temporary local data, no external AI or webhook)
         if: matrix.python == '3.12'
         run: uv run --with playwright==1.65.2 python checks/browser.py
       - run: uv build

@@ -1,21 +1,26 @@
-"""Real browser regression. Only disposable local accounts/data; never call paid APIs."""
+"""Real browser regression. Only disposable local data; never call paid APIs."""
 
 import argparse
-import os
 import re
-import secrets
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
-from wsgiref.simple_server import WSGIRequestHandler, make_server
 
-from cryptography.fernet import Fernet
 from playwright.sync_api import expect, sync_playwright
 
+from jobevent.app import Service, handler
+from jobevent.store import Store
 
-class Quiet(WSGIRequestHandler):
-    def log_message(self, *args):
-        pass
+
+class MemoryVault(dict):
+    """The check must never touch the OS credential store."""
+
+    def set(self, key, value):
+        if value:
+            self[key] = value
+        else:
+            self.pop(key, None)
 
 
 def check(base, shots):
@@ -27,13 +32,6 @@ def check(base, shots):
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("dialog", lambda d: d.accept())
         page.goto(base)
-        expect(page).to_have_url(re.compile("/signin"))
-        page.locator('a[href="/signup"]').click()
-        password = secrets.token_urlsafe(20)
-        page.locator("[name=username]").fill("workspace")
-        page.locator("[name=password1]").fill(password)
-        page.locator("[name=password2]").fill(password)
-        page.get_by_role("button", name="회원가입").click()
         expect(page.locator("#rooms")).to_be_visible()
 
         def nav(name):
@@ -69,7 +67,7 @@ def check(base, shots):
         expect(link_form.locator("[name=text]")).to_have_value("편집 중")
         page.locator("#cancelLink").click()
         # Old bookmarks go directly to documents within the single profile page.
-        page.goto(base + "/app#library")
+        page.goto(base + "/#library")
         expect(page).to_have_url(re.compile(r"#profile/docs$"))
         page.locator("#newRef").click()
         assert not page.locator("#refForm input[type=url]").count()
@@ -114,7 +112,7 @@ def check(base, shots):
         assert page.get_by_label("기술 포트폴리오", exact=True).is_checked()
         expect(page.get_by_label("내 공개 링크도 참고")).not_to_be_checked()
         page.set_viewport_size({"width": 390, "height": 844})
-        for panel in ("rooms", "profile", "history", "account"):
+        for panel in ("rooms", "profile", "history"):
             nav(panel)
             expect(page.locator("#" + panel)).to_be_visible()
             assert page.evaluate(
@@ -139,17 +137,10 @@ def check(base, shots):
         page.locator("#profileLinkList").get_by_role("button", name="삭제").click()
         expect(page.locator("#profileLinkList article")).to_have_count(0)
         expect(page.locator("#refs")).to_contain_text("활동 이력서")
-        nav("account")
-        page.locator(".destructive summary").click()
-        page.locator("#deleteAccount [name=password]").fill("wrong-password")
-        page.locator("#deleteAccount button").click()
-        expect(page.locator("#status")).to_contain_text("비밀번호가 일치하지 않습니다")
-        page.locator("#logout").click()
-        expect(page.locator("#authForm")).to_be_visible()
         assert not errors, errors
         browser.close()
         print(
-            "실제 브라우저: 가입·프로필 통합·파일/링크 독립 관리·중복 차단·방 저장/복제·모바일 4화면·탈퇴 오류 안내·로그아웃 통과"
+            "실제 브라우저: 프로필 통합·파일/링크 독립 관리·중복 차단·방 저장/복제·모바일 3화면 통과"
         )
 
 
@@ -158,20 +149,8 @@ def main():
     p.add_argument("--screenshots", type=Path)
     args = p.parse_args()
     with TemporaryDirectory() as data:
-        os.environ.update(
-            DJANGO_SETTINGS_MODULE="jobevent.hosted.settings",
-            JOBEVENT_DEV="1",
-            JOBEVENT_ORIGIN="http://127.0.0.1",
-            JOBEVENT_DATA_DIR=data,
-            JOBEVENT_SECRET_KEY=secrets.token_urlsafe(64),
-            JOBEVENT_ENCRYPTION_KEY=Fernet.generate_key().decode(),
-        )
-        from django.core.management import call_command
-        from django.core.wsgi import get_wsgi_application
-
-        app = get_wsgi_application()
-        call_command("migrate", verbosity=0)
-        with make_server("127.0.0.1", 0, app, handler_class=Quiet) as server:
+        service = Service(Store(data), MemoryVault())
+        with ThreadingHTTPServer(("127.0.0.1", 0), handler(service)) as server:
             thread = Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
