@@ -380,7 +380,7 @@ async function load(initial) {
         : "알림방에서 미리보기를 실행하세요";
   $("#briefCopy").textContent = !ready
     ? !s.hasKey
-      ? "사용할 회사와 API 키를 등록하세요. 모델은 서비스가 선택합니다."
+      ? "사용할 회사와 API 키를 등록하세요. 모델은 Jobevent가 정합니다."
       : "이력서, 직접 작성한 글, 공개 링크 중 하나만 있어도 됩니다."
     : !s.rooms.length
       ? "받고 싶은 기회와 Discord 또는 Slack 채널을 연결하세요."
