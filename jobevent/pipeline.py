@@ -23,7 +23,7 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def post(url, body, key=None, *, auth_headers=None):
-    headers = {"Content-Type": "application/json", "User-Agent": "Jobevent/0.1"}
+    headers = {"Content-Type": "application/json", "User-Agent": "Jobevent/0.2.0"}
     if auth_headers:
         headers.update(auth_headers)
     if key:
