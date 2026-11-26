@@ -1,13 +1,19 @@
 # 함께 개발하기
 
-jobevent는 유지보수자 두 명([@ghdtjdwn](https://github.com/ghdtjdwn), [@kwon32](https://github.com/kwon32))이 공개 저장소에서 함께 개발합니다.
+jobevent는 유지보수자 두 명([@ghdtjdwn](https://github.com/ghdtjdwn), [@kwon32](https://github.com/kwon32))이 공개 저장소에서 함께 개발하는 로컬 설치형 앱입니다.
 이 문서는 둘이 같은 방식으로 일하기 위한 규칙입니다.
 외부 기여자도 같은 규칙을 따르며, 규칙을 바꿀 때는 이 문서를 고치는 PR을 올리고 상대의 승인을 받습니다.
+
+## 외부 기여
+
+- 버그 제보와 제안은 이슈 템플릿으로 받습니다. 외부 이슈·PR에는 유지보수자 중 한 명이 1주 안에 첫 응답합니다.
+- 코드 기여는 이슈에서 방향을 먼저 맞춘 뒤 받습니다. 논의 없이 올라온 큰 PR은 이슈로 옮겨 범위부터 정합니다.
+- 호스팅·다중 사용자 셀프호스팅 지원은 받지 않습니다. 로컬 단일 사용자 앱만 지원합니다.
 
 ## 개발 환경
 
 1. Python 3.11 이상과 [uv](https://docs.astral.sh/uv/)를 사용합니다.
-2. `uv sync --locked` → `uv run python deploy/dev.py` → 표시된 주소에서 **테스트 계정**을 만듭니다. 이 명령은 개발용 DB·키·워커를 생성합니다. 개발용 서버를 인터넷에 노출하지 마세요.
+2. `uv sync --locked` → `uv run jobevent`로 실행합니다. 이 명령은 실제 `~/.jobevent`와 OS 자격 증명 저장소를 쓰므로, 개발 중에는 합성 자료와 지출 한도를 건 개발용 키, 테스트 채널의 웹훅만 넣습니다. 단위 테스트와 브라우저 검사는 임시 데이터와 메모리 자격 증명 저장소만 씁니다.
 3. PR을 올리기 전에 다음 검사를 실행합니다. CI도 같은 검사를 실행합니다.
 
 ```sh
@@ -17,16 +23,18 @@ node --check jobevent/static/app.js
 uv build
 ```
 
-로그인·자료 보관·방 생성/복제·모바일 탐색을 실제 브라우저로 회귀 검사하려면 Chrome이 있는 환경에서 `uv run --with playwright==1.65.2 python checks/browser.py`를 실행합니다. 임시 로컬 DB만 쓰며 외부 AI·채널을 호출하지 않습니다. `--screenshots docs`는 README의 화면 자료를 갱신합니다.
+자료 보관·방 생성/복제·모바일 탐색을 실제 브라우저로 회귀 검사하려면 Chrome이 있는 환경에서 `uv run --with playwright==1.65.2 python checks/browser.py`를 실행합니다. 임시 로컬 DB와 메모리 자격 증명 저장소만 쓰며 외부 AI·채널을 호출하지 않습니다. `--screenshots docs`는 README의 화면 자료를 갱신합니다.
 
 | 변경 | 시작할 곳 |
 |---|---|
 | 새 알림 틀, 요일·시간대·입력 검증 | `jobevent/model.py` |
 | 새 공고 공급자 | `jobevent/sources.py`와 `tests/test_boards.py`. 출처 약관·인증·페이지 한도부터 확인 |
 | 모델 호출, 근거 링크, 중복 판정, 채널 전송 | `jobevent/pipeline.py`, `tests/test_pipeline.py` |
-| 대시보드 | `jobevent/static/` (빌드 없는 HTML/CSS/JS) |
-| 회원·권한·호스팅 API·운영 워커 | `jobevent/hosted/`, `tests/test_hosted*.py` |
-| 로컬 단일 사용자 실행 | `jobevent/app.py`, `jobevent/store.py` |
+| AI 제공 회사별 요청·응답 처리 | `jobevent/providers.py`, `tests/test_provider_library.py` |
+| 자료·공개 링크 가져오기(PDF, GitHub, 정적 사이트) | `jobevent/imports.py`, `jobevent/library.py`, `tests/test_imports.py` |
+| 대시보드 | `jobevent/static/` (빌드 없는 HTML/CSS/JS), `checks/browser.py` |
+| 로컬 HTTP 서버·요청 검사·예약 실행 | `jobevent/app.py`, `tests/test_http.py`, `tests/test_rooms.py` |
+| SQLite 저장소·자격 증명 저장소 | `jobevent/store.py` |
 
 ## 작업 흐름
 
@@ -35,13 +43,13 @@ uv build
 3. 의미 있는 단위로 커밋하고, 하루 이상 걸리는 작업은 Draft PR을 먼저 열어 어떤 파일을 고치는지 공유합니다.
 4. 작업이 끝나면 Ready for review로 바꿉니다. 상대에게 리뷰가 자동 요청됩니다.
 5. 상대의 Approve와 필수 검사 통과 후 **작성자가** Squash merge합니다. Auto-merge를 켜 두면 조건이 갖춰질 때 자동으로 병합됩니다.
-6. `main`에 병합되면 운영 배포가 자동으로 이어집니다. [병합과 배포](#병합과-배포)에서 반영을 확인합니다.
+6. 이용자는 태그된 릴리스만 설치하므로 `main` 병합이 곧 배포는 아닙니다. 배포는 [릴리스](#릴리스)를 따릅니다.
 
 같은 파일을 둘이 동시에 크게 고치면 충돌이 생깁니다. 시작 전에 열린 PR을 보고, 겹치면 먼저 말하고 순서를 정합니다. 상대 PR에 의존하는 작업은 그 PR 브랜치에서 분기해 그 브랜치를 대상으로 PR을 열고, 선행 PR이 병합되면 `git rebase --onto origin/main <선행 브랜치>` 후 대상을 `main`으로 바꿉니다.
 
 ## 브랜치
 
-`main` 하나만 장기 브랜치로 둡니다. 둘이 개발하고 `main`이 곧 운영이므로 `develop` 브랜치와 릴리스 PR을 두지 않습니다.
+`main` 하나만 장기 브랜치로 둡니다. 릴리스는 `main`의 커밋에 태그를 붙여 만들므로 `develop`·`release` 브랜치를 두지 않습니다.
 
 - 작업 브랜치는 `type/{이슈번호}-{요약}` 형식입니다. 이슈가 없으면 `type/{요약}`입니다. 요약은 영문 소문자와 하이픈으로 씁니다.
 - `type`은 아래 [커밋과 PR 제목](#커밋과-pr-제목)의 표를 따릅니다.
@@ -51,7 +59,7 @@ uv build
 ```text
 feat/12-room-timezone
 fix/31-duplicate-webhook
-docs/operations-deploy-cycle
+docs/readme-install-guide
 ```
 
 ## 커밋과 PR 제목
@@ -65,7 +73,7 @@ docs/operations-deploy-cycle
 | `refactor` | 동작 변화 없는 코드 개선 |
 | `docs` | 문서 |
 | `test` | 테스트만 추가하거나 수정 |
-| `chore` | 빌드, 의존성, CI, 배포 설정 |
+| `chore` | 빌드, 의존성, CI, 릴리스 설정 |
 
 ```text
 feat: 방마다 알림 시간대 선택
@@ -102,13 +110,14 @@ PR은 [템플릿](.github/PULL_REQUEST_TEMPLATE.md)의 섹션을 따릅니다. �
 - 기능 변경, 리팩터링, 대규모 포맷 변경, 의존성 갱신은 서로 다른 PR로 만듭니다.
 - 이슈를 완료하면 `Closes #번호`, 일부만 처리하면 `Related #번호`를 씁니다. PR 하나로 이슈 여러 개를 닫지 않습니다.
 - `검증 결과`에는 실제로 실행한 검사만 씁니다. 실행하지 못한 검사는 `-하지 못했습니다`와 이유를 씁니다.
+- 프롬프트·모델·공고 출처를 바꾸는 PR은 작성자가 자기 PC에서 바뀐 분류마다 추천 결과 10건을 직접 판정해 `원문 열림 n/10 · 접수 중 n/10 · 지원 가능 n/10`을 `검증 결과`에 적습니다. 개인 자료, 키, 웹훅, 받은 메시지 원문은 적지 않습니다. 사용 통계를 수집하지 않으므로 이 판정이 유일한 품질 근거이며, 수치가 쌓이기 전에는 정확도를 홍보하지 않습니다.
 - UI 변경은 합성 데이터로 찍은 전/후 스크린샷을 붙입니다.
 - 개인 이력서, 실제 키, 웹훅 URL, 서버 구성, 외부 서비스 원문 응답은 PR, 이슈, 코멘트, 스크린샷 어디에도 붙이지 않습니다. 이 저장소는 공개입니다.
 
 ## 리뷰
 
 - 리뷰 요청을 받으면 다음 작업일 안에 Approve, Request changes, 질문 중 하나로 응답합니다. 못 하면 언제 볼 수 있는지 코멘트로 남깁니다.
-- 코드뿐 아니라 데이터 삭제, 외부 발송, AI API 비용 변화, 암호문 호환성도 확인합니다.
+- 코드뿐 아니라 데이터 삭제, 외부 발송, AI API 비용 변화, 이미 설치한 이용자의 저장 데이터 호환성(`~/.jobevent` SQLite 구조, 자격 증명 항목 이름)도 확인합니다.
 - 리뷰 코멘트는 첫머리에 표지 하나를 붙입니다.
 
 | 표지 | 뜻 | 작성자의 행동 |
@@ -126,28 +135,30 @@ PR은 [템플릿](.github/PULL_REQUEST_TEMPLATE.md)의 섹션을 따릅니다. �
 - 모든 대화가 해결돼야 병합할 수 있습니다. 승인 뒤 새 커밋을 올리면 승인이 취소되므로 다시 리뷰를 받습니다.
 - 인사, 감사 문장, 작성 과정의 대화는 쓰지 않습니다. 첫 문장에 결론이나 요청을 씁니다.
 
-## 병합과 배포
+## 병합과 릴리스
 
-1. 필수 검사 `test (3.11)`, `test (3.12)`, `container`, `pr-title`과 상대의 Approve가 모두 갖춰지면 Squash merge합니다. 브랜치가 `main`보다 뒤처져 있으면 **Update branch**로 최신화합니다. 실패한 검사를 우회하지 않습니다.
-2. `main`의 push CI가 통과한 뒤 Actions의 **Production delivery**에서 같은 SHA가 운영에 반영됐는지 확인합니다. PR CI 성공은 배포 완료가 아닙니다.
-3. 운영 반영 뒤에만 확인할 수 있는 완료 조건이 있으면 이슈를 그때 닫습니다.
-4. SSH 키, 서버 환경변수, 고객 API 키를 둘 사이에 공유하거나 GitHub에 올리지 않습니다. 보안 신고는 [비공개 절차](SECURITY.md)를 따릅니다.
-5. 주간 CI는 코드가 그대로여도 ARM64 이미지의 설치 패키지를 새 보안 공지와 대조합니다. Dependabot PR은 자동 병합하지 않고 호환성·암호문 복호화·잠금 회귀를 다른 변경과 같은 기준으로 리뷰합니다.
+1. 필수 검사 `test (3.11)`, `test (3.12)`, `pr-title`과 상대의 Approve가 모두 갖춰지면 Squash merge합니다. 브랜치가 `main`보다 뒤처져 있으면 **Update branch**로 최신화합니다. 실패한 검사를 우회하지 않습니다.
+2. 주간 CI는 코드가 그대로여도 잠금 파일의 런타임 패키지를 새 보안 공지와 대조합니다. Dependabot PR은 자동 병합하지 않고 호환성·저장 데이터·잠금 회귀를 다른 변경과 같은 기준으로 리뷰합니다.
+3. 실제 키, 웹훅, 이력서를 둘 사이에 공유하거나 GitHub에 올리지 않습니다. 보안 신고는 [비공개 절차](SECURITY.md)를 따릅니다.
 
-### 긴급 수정
+### 릴리스
 
-운영 장애로 상대의 리뷰를 기다릴 수 없으면 저장소 관리자(@ghdtjdwn)가 승인 없이 PR을 병합할 수 있습니다. 이때도 PR과 필수 검사는 거치고 `main` 직접 push는 하지 않습니다. 병합 뒤 상대에게 리뷰를 요청하고, 지적 사항은 후속 PR로 고칩니다.
+이용자는 `uv tool install git+https://github.com/ghdtjdwn/jobevent@<태그>`로 설치합니다. PyPI에는 올리지 않습니다.
+
+1. `chore: vX.Y.Z 릴리스 준비` PR에서 `pyproject.toml`의 버전과 외부 요청 `User-Agent`를 같은 버전으로 올립니다. 프롬프트·모델·출처가 바뀐 릴리스는 이 PR에 추천 품질 판정을 적습니다.
+2. 병합된 `main` 커밋에 `vX.Y.Z` 태그를 붙이고 GitHub Release를 만듭니다. 노트에는 설치 명령, 주요 변경, 저장 데이터나 설정에 필요한 이용자 행동을 씁니다.
+3. 새 환경에서 태그로 설치해 `jobevent --no-browser`가 로컬 주소를 출력하는지 확인합니다.
+
+릴리스 뒤 발견된 문제는 버그 이슈와 `fix` PR로 고치고 다음 릴리스에 담습니다.
 
 ## AI 도구
 
-AI 도구를 써도 되지만 결과는 작성자가 이해하고 책임집니다. 커밋, PR, 코멘트에 AI 도구 이름이나 생성 표기를 넣지 않습니다. 실제 키, 이력서, 운영 로그를 AI 도구에 붙이지 않습니다. 에이전트용 요약은 [AGENTS.md](AGENTS.md)에 있습니다.
+AI 도구를 써도 되지만 결과는 작성자가 이해하고 책임집니다. 커밋, PR, 코멘트에 AI 도구 이름이나 생성 표기를 넣지 않습니다. 실제 키, 이력서, 실행 기록 원문을 AI 도구에 붙이지 않습니다. 에이전트용 요약은 [AGENTS.md](AGENTS.md)에 있습니다.
 
 ## 저장소 설정
 
 다음 설정이 적용돼 있습니다. 바꾸려면 논의 이슈로 먼저 합의합니다.
 
-- `main` 보호: PR 필수, 승인 1명, 새 커밋 시 승인 취소, 대화 해결 필수, 필수 검사 통과와 최신화 필수, force push·삭제 금지. 관리자만 PR을 통한 긴급 병합 가능.
+- `main` 보호: PR 필수, 승인 1명, 새 커밋 시 승인 취소, 대화 해결 필수, 필수 검사(`test (3.11)`, `test (3.12)`, `pr-title`) 통과와 최신화 필수, force push·삭제 금지. 저장소 관리자 역할은 PR을 거칠 때만 이 규칙을 우회할 수 있습니다.
 - 병합 방식: Squash merge만 허용하며 커밋 제목은 PR 제목입니다. 병합한 브랜치는 자동 삭제하고 Auto-merge를 허용합니다.
 - [CODEOWNERS](.github/CODEOWNERS)로 상대에게 리뷰를 자동 요청합니다.
-
-GitHub 저장소 권한은 서비스 회원 권한과 무관합니다. 저장소 초대는 관리자가 GitHub에서 따로 처리합니다.
