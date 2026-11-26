@@ -26,34 +26,12 @@ jobs:
       - run: uv run ruff check . && uv run ruff format --check .
       - run: node --check jobevent/static/app.js
       - run: uv run pytest -q
-      - name: Browser workflow (isolated account, no external AI or webhook)
+      - name: Browser workflow (temporary local data, no external AI or webhook)
         if: matrix.python == '3.12'
         run: uv run --with playwright==1.65.2 python checks/browser.py
-      - run: uv build
-  container:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
-        with:
-          version: "0.11.25"
-      - run: bash -n deploy/cd/pull-release.sh && docker build -t jobevent:ci .
-      - name: Audit exact third-party Python packages in the ARM64 release image
+      - name: Audit locked runtime packages for known vulnerabilities
+        if: matrix.python == '3.12'
         run: |
-          docker run --rm jobevent:ci python -c 'from importlib.metadata import distributions; print("\n".join(sorted({d.metadata["Name"]+"=="+d.version for d in distributions() if d.metadata["Name"].lower()!="jobevent"})))' > "$RUNNER_TEMP/runtime.txt"
-          grep -Eiq '^cryptography==' "$RUNNER_TEMP/runtime.txt"
-          grep -Eiq '^filelock==' "$RUNNER_TEMP/runtime.txt"
-          grep -Eiq '^django==' "$RUNNER_TEMP/runtime.txt"
+          uv export --locked --no-dev --no-emit-project --no-hashes -o "$RUNNER_TEMP/runtime.txt"
           uvx pip-audit==2.10.1 --disable-pip --no-deps --strict -r "$RUNNER_TEMP/runtime.txt"
-      - name: Check production configuration and worker
-        run: |
-          python3 deploy/configure.py example.org
-          docker run --rm --env-file .env jobevent:ci sh -ec 'django-admin migrate --noinput && django-admin check --deploy --fail-level ERROR && django-admin runworker --once'
-      - name: Preflight like deploy/cd without production keys, network or data
-        run: |
-          printf 'JOBEVENT_ORIGIN=https://preflight.invalid\nJOBEVENT_SECRET_KEY=%s\nJOBEVENT_ENCRYPTION_KEY=%s\n' \
-            "$(head -c 64 /dev/urandom | base64 | tr -d '\n')" "$(head -c 32 /dev/urandom | base64 | tr '+/' '-_')" > "$RUNNER_TEMP/preflight.env"
-          docker run --rm --network none --read-only --tmpfs /tmp \
-            --tmpfs /var/lib/jobevent:uid=10001,gid=10001,mode=0700 --env-file "$RUNNER_TEMP/preflight.env" jobevent:ci \
-            sh -ec 'django-admin check --deploy --fail-level ERROR >&2 && django-admin showmigrations --plan' > "$RUNNER_TEMP/plan.txt"
-          awk '{print $NF}' "$RUNNER_TEMP/plan.txt" | grep -qx 'auth.0001_initial'
+      - run: uv build

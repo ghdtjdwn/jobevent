@@ -1,9 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "redirects": [
-    { "source": "/", "destination": "https://jobevent.ssumcp.duckdns.org/app", "permanent": false },
-    { "source": "/signup", "destination": "https://jobevent.ssumcp.duckdns.org/signup", "permanent": false },
-    { "source": "/signin", "destination": "https://jobevent.ssumcp.duckdns.org/signin", "permanent": false }
-  ]
-}
