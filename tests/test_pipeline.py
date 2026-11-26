@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from jobevent.pipeline import Failure, deliver, identity
+from jobevent.pipeline import Failure, check_channel, deliver, identity
 
 
 def test_discovery_sees_only_public_query_and_ranking_has_no_tools(
@@ -151,3 +151,27 @@ def test_contacts_never_reach_ranking_or_the_channel(
     ranking = json.loads(transport.calls[1][1]["input"])["profile"]
     assert all(s not in ranking for s in ("me@example.com", "010-1234", "me.example"))
     assert "백엔드 지망" in ranking
+
+
+@pytest.mark.parametrize(
+    "hook",
+    [
+        "https://hooks.slack.com/services/test/test/test",
+        "https://discord.com/api/webhooks/1/test",
+    ],
+)
+def test_opportunity_alert_is_labeled_ai_but_channel_check_is_not(hook, transport):
+    item = {
+        "title": "제목",
+        "reason": "이유",
+        "deadline": None,
+        "url": "https://a.org/1",
+    }
+    deliver(hook, item)
+    check_channel(hook)
+    alert, check = (body for _, body, _ in transport.calls)
+    shown = alert.get("content") or alert["blocks"][0]["text"]["text"]
+    assert shown.startswith("[AI 추천] 제목\n")
+    assert check.get("content", check.get("text")) == (
+        "Jobevent 연결 확인 · 이 채널이 알림을 받을 준비가 되었습니다."
+    )
