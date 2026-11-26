@@ -1,8 +1,0 @@
-*
-!pyproject.toml
-!uv.lock
-!README.md
-!LICENSE
-!jobevent/
-!jobevent/**
-**/__pycache__

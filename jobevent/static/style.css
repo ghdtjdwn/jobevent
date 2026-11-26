@@ -266,13 +266,6 @@ body[aria-busy="true"] {
 .topbar span {
   color: var(--muted);
 }
-#identity {
-  margin-left: auto;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  max-width: 40%;
-}
 .crumb {
   opacity: 0.65;
 }
@@ -636,15 +629,6 @@ details p + p {
 .results small {
   color: var(--muted);
 }
-#account .sheet {
-  max-width: 660px;
-}
-.destructive summary {
-  color: var(--red);
-}
-#deleteAccount button {
-  margin-top: 10px;
-}
 footer {
   font-size: 0.81rem;
   color: #5c6a60;
@@ -935,7 +919,7 @@ footer span {
 @media (max-width: 660px) {
   .rail nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .rail nav a {
     flex-direction: column;
@@ -946,9 +930,6 @@ footer span {
   }
   .rail nav svg {
     display: block;
-  }
-  .rail nav:has(#accountNav[hidden]) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
