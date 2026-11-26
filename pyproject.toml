@@ -10,10 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 dependencies = [
-    "cryptography>=50.0.0,<51",
-    "django>=5.2.8,<5.3",
     "filelock>=4.2.1,<5",
-    "gunicorn>=23,<28 ; sys_platform != 'win32'",
     "keyring>=25,<26",
     "pypdf>=6,<8",
     "tzdata>=2025.1",
@@ -23,7 +20,7 @@ dependencies = [
 jobevent = "jobevent.app:main"
 
 [tool.setuptools.package-data]
-jobevent = ["static/*", "hosted/templates/hosted/*"]
+jobevent = ["static/*"]
 
 [tool.setuptools.packages.find]
 include = ["jobevent*"]

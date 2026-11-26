@@ -66,7 +66,6 @@ function route(focus = true) {
     history.replaceState(null, "", "#profile/docs");
   }
   let screen = ["profile", "history"].includes(path) ? path : "rooms";
-  if (path === "account" && state.hosted) screen = "account";
   if (["new", "edit", "copy"].includes(path)) {
     const r = id && state.rooms.find((item) => item.id === id);
     if (path === "new" || r) {
@@ -110,14 +109,6 @@ function templateHint() {
       " · 검색 조건과 일정은 이 방에서 변경할 수 있습니다."
     : "찾고 싶은 기회의 종류를 검색 조건에 직접 입력하세요.";
 }
-function csrf() {
-  return (
-    document.cookie
-      .split("; ")
-      .find((v) => v.startsWith("csrftoken="))
-      ?.slice(10) || ""
-  );
-}
 async function api(path, data) {
   const r = await fetch(
     "/api/" + path,
@@ -128,15 +119,10 @@ async function api(path, data) {
           headers: {
             "Content-Type": "application/json",
             "X-Jobevent": "1",
-            "X-CSRFToken": csrf(),
           },
           body: JSON.stringify(data),
         },
   );
-  if (r.status === 401) {
-    location.assign("/signin");
-    throw Error("다시 로그인하세요.");
-  }
   if (!r.headers.get("content-type")?.includes("application/json"))
     throw Error("요청이 거부되었습니다. 페이지를 새로고침하세요.");
   const result = await r.json();
@@ -426,13 +412,6 @@ async function load(initial) {
   $("#roomCount").textContent = s.rooms.length;
   $("#activeCount").textContent =
     "예약 중 " + s.rooms.filter((r) => r.enabled).length + "개";
-  if (initial && s.hosted) {
-    $("#identity").textContent = s.username;
-    $("#privacyCopy").textContent =
-      "추천을 실행하면 저장한 프로필과 선별 기준이 내 키로 선택한 AI 제공자에 전달됩니다. 웹 검색에는 방의 공개 검색어만 사용합니다. 키·웹훅·프로필은 서버에서 암호화해 보관합니다. 회사 기밀, 연락처, 주민등록번호는 넣지 마세요.";
-    $("#accountNav").hidden = false;
-    $("#who").textContent = s.username + " 님의 계정입니다.";
-  }
   if (initial) {
     $("#legacyProfile").elements.profile.value = s.profile;
     settings.elements.provider.value = s.provider || "openai";
@@ -820,39 +799,6 @@ $("#forget").onclick = () => {
       $("#results").hidden = true;
       await load(false);
       notice("삭제했습니다.");
-    });
-};
-function accountPost(path, values = {}) {
-  const form = document.createElement("form");
-  form.method = "post";
-  form.action = path;
-  for (const [name, value] of Object.entries({
-    ...values,
-    csrfmiddlewaretoken: csrf(),
-  })) {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.append(input);
-  }
-  document.body.append(form);
-  form.submit();
-}
-$("#logout").onclick = () => accountPost("/logout");
-$("#deleteAccount").onsubmit = (e) => {
-  e.preventDefault();
-  const password = e.currentTarget.elements.password.value;
-  if (confirm("계정과 저장한 모든 데이터를 영구 삭제할까요?"))
-    task(async () => {
-      const r = await fetch("/account/delete", {
-        method: "POST",
-        headers: { "X-CSRFToken": csrf() },
-        body: new URLSearchParams({ password }),
-      });
-      if (r.redirected || r.ok) return location.assign("/signup");
-      const body = await r.json().catch(() => ({}));
-      throw new Error(body.error || "계정을 삭제하지 못했습니다.");
     });
 };
 load(true).catch((e) => {
