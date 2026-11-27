@@ -146,6 +146,11 @@ def discover(key, model, r, today):
     return "\n".join(p["text"] for p in notes)[:18000], urls
 
 
+def clip(text, limit):
+    text = text.strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
 def rank(key, model, r, today, profile, notes, urls):
     if not urls:
         return []
@@ -197,9 +202,9 @@ def rank(key, model, r, today, profile, notes, urls):
                 continue  # possibly echoed from the profile or an injected page
             result.append(
                 dict(
-                    title=title.strip()[:120],
-                    reason=reason.strip()[:350],
-                    check=check.strip()[:140],
+                    title=clip(title, 120),
+                    reason=clip(reason, 350),
+                    check=clip(check, 140),
                     deadline=deadline,
                     url=urls[n],
                 )
