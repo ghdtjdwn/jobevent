@@ -110,6 +110,15 @@ def test_expired_recommendations_are_skipped(service, configured, transport):
     assert not service.change("/api/send", {"id": configured["id"]})["items"]
 
 
+def test_long_recommendation_text_is_marked_when_clipped(
+    service, configured, transport
+):
+    transport.items[0]["check"] = "가" * 200
+    item = service.change("/api/preview", {"id": configured["id"]})["items"][0]
+    assert len(item["check"]) == 140 and item["check"].endswith("…")
+    assert not item["title"].endswith("…")
+
+
 def test_identity_ignores_tracking_not_distinct_application_ids():
     base = "https://example.org/notice?id=12"
     assert identity(base) == identity(
