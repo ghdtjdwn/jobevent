@@ -29,6 +29,8 @@ GitHub에서 직접 설치해 쓰는 개발자·개발 직군 학생을 대상�
 4. 받을 채널의 웹훅을 입력합니다. [Discord](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)는 서버 설정 → 연동 → 웹후크, [Slack](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)은 앱 → Incoming Webhooks → 워크스페이스에 추가 → 채널 선택에서 발급합니다.
 5. 말투, 시간대, 요일, 현지 시각, 최대 건수를 정해 저장합니다. **채널 연결 확인**은 AI를 호출하지 않고 고정 메시지 한 건만 보냅니다. **미리보기**는 검색·추천까지만 하고, 15분 안에 **이 결과 그대로 발송**을 누르면 추가 비용 없이 그 목록에서 마감되지 않은 미발송 항목만 보냅니다. **새로 검색해 발송**은 별도의 유료 검색입니다. 예약은 방마다 따로 켭니다.
 
+중간에 막히면 [사용 중 막힘 이슈](https://github.com/ghdtjdwn/jobevent/issues/new?template=stuck.yml)로 어느 단계에서 멈췄는지 알려 주세요. 코드를 몰라도 됩니다.
+
 예: 평일 오전 9시엔 Slack에 서울 백엔드 인턴 3건을 짧은 존댓말로, 토요일 오후 2시엔 Discord에 대학생 해커톤 2건을 친근한 말투로 받을 수 있습니다. 두 방의 발송 이력은 서로 독립적입니다.
 
 ## 어떤 공고를 찾나요?
