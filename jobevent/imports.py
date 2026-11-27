@@ -56,7 +56,7 @@ def fetch(url):
             conn.request(
                 "GET",
                 path,
-                headers={"User-Agent": "Jobevent/0.2.1", "Accept-Encoding": "identity"},
+                headers={"User-Agent": "Jobevent/0.2.2", "Accept-Encoding": "identity"},
             )
             resp = conn.getresponse()
             if resp.status != 200:
