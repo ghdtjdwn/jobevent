@@ -76,3 +76,20 @@ def test_served_page_is_not_embeddable_and_does_not_load_third_party_scripts(htt
     assert status == 200 and b"Jobevent" in body
     assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
     assert "default-src 'self'" in headers["Content-Security-Policy"]
+
+
+def test_busy_port_exits_with_guidance(tmp_path, monkeypatch, capsys):
+    import socket
+
+    from jobevent import app
+
+    with socket.socket() as busy:
+        busy.bind(("127.0.0.1", 0))
+        busy.listen()
+        port = busy.getsockname()[1]
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setattr("sys.argv", ["jobevent", "--no-browser", f"--port={port}"])
+        with pytest.raises(SystemExit) as exit:
+            app.main()
+    assert exit.value.code == 1
+    assert f"--port {port + 1}" in capsys.readouterr().err
