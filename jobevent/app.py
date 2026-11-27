@@ -5,6 +5,7 @@ import base64
 import json
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
@@ -324,7 +325,18 @@ def handler(service):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        # On Windows SO_REUSEADDR lets a second process bind a port that is in use.
+        self.allow_reuse_address = sys.platform != "win32"
+        super().server_bind()
+
+
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        # Redirected output on Windows uses the locale code page, which may lack Hangul.
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description="Jobevent 로컬 알림 스튜디오")
     p.add_argument("--no-browser", action="store_true")
     p.add_argument("--port", type=int, default=8765)
@@ -338,7 +350,7 @@ def main():
     except Timeout:
         p.exit(1, "이미 이 기기에서 Jobevent가 실행 중입니다.\n")
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(service))
+        server = Server(("127.0.0.1", args.port), handler(service))
     except OSError as e:
         p.exit(
             1,
