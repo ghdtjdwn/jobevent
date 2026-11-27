@@ -137,8 +137,36 @@ def test_slack_structured_text_and_source_link(transport):
     deliver("https://hooks.slack.com/services/test/test/test", item)
     _, body, key = transport.calls[0]
     assert key is None
-    assert body["blocks"][0]["text"]["type"] == "plain_text"
-    assert "&amp;" in body["blocks"][1]["text"]["text"]
+    assert body["text"] == "[AI 추천] 제목"
+    assert body["blocks"][0] == {
+        "type": "header",
+        "text": {"type": "plain_text", "text": "[AI 추천] 제목"},
+    }
+    assert body["blocks"][1]["text"] == {
+        "type": "plain_text",
+        "text": "사용자 지정 말투",
+    }
+    assert body["blocks"][2]["elements"][0]["text"] == "마감 · 원문 확인"
+    assert "&amp;" in body["blocks"][-1]["text"]["text"]
+
+
+def test_discord_alert_separates_title_reason_and_details(transport):
+    item = {
+        "title": "제목",
+        "reason": "이유",
+        "deadline": "2026-12-04",
+        "check": "재학생",
+        "url": "https://example.org/a_(b)?x=1",
+    }
+    deliver("https://discord.com/api/webhooks/1/test", item)
+    assert transport.calls[0][1]["content"].splitlines() == [
+        "### [AI 추천] 제목",
+        "이유",
+        "",
+        "**마감** 2026-12-04",
+        "**확인할 조건** 재학생",
+        "**원문** [example.org](<https://example.org/a_%28b%29?x=1>)",
+    ]
 
 
 def test_contacts_never_reach_ranking_or_the_channel(
@@ -180,7 +208,7 @@ def test_opportunity_alert_is_labeled_ai_but_channel_check_is_not(hook, transpor
     check_channel(hook)
     alert, check = (body for _, body, _ in transport.calls)
     shown = alert.get("content") or alert["blocks"][0]["text"]["text"]
-    assert shown.startswith("[AI 추천] 제목\n")
+    assert shown.splitlines()[0].removeprefix("### ") == "[AI 추천] 제목"
     assert check.get("content", check.get("text")) == (
         "Jobevent 연결 확인 · 이 채널이 알림을 받을 준비가 되었습니다."
     )

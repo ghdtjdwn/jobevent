@@ -237,22 +237,42 @@ def check_channel(hook):
 
 
 def deliver(hook, item):
-    url = item["url"]
+    url, host = item["url"], urlsplit(item["url"]).hostname
     # Channel members must be able to tell the alert is an AI recommendation.
-    summary = f"[AI 추천] {item['title']}\n{item['reason']}\n마감: {item['deadline'] or '원문 확인'}"
+    title = f"[AI 추천] {item['title']}"
+    details = [("마감", item["deadline"] or "원문 확인")]
     if item.get("check"):
-        summary += "\n확인할 조건: " + item["check"]
+        details.append(("확인할 조건", item["check"]))
+    # Parentheses would end a Discord masked link early.
+    link = url.replace("(", "%28").replace(")", "%29")
+    discord = [f"### {title}", item["reason"], ""]
+    discord += [f"**{label}** {text}" for label, text in details]
+    discord.append(f"**원문** [{host}](<{link}>)")
     escaped = url.replace("&", "&amp;").replace("|", "%7C")
     send_webhook(
         hook,
-        {"content": summary + "\n<" + url + ">"},
+        {"content": "\n".join(discord)},
         {
-            "text": "새 기회 알림",
+            "text": title,
             "blocks": [
-                {"type": "section", "text": {"type": "plain_text", "text": summary}},
+                {"type": "header", "text": {"type": "plain_text", "text": title}},
                 {
                     "type": "section",
-                    "text": {"type": "mrkdwn", "text": f"<{escaped}|모집 원문 보기>"},
+                    "text": {"type": "plain_text", "text": item["reason"]},
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {"type": "plain_text", "text": f"{label} · {text}"}
+                        for label, text in details
+                    ],
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{escaped}|모집 원문 보기> · {host}",
+                    },
                 },
             ],
             "unfurl_links": False,
