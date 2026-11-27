@@ -337,10 +337,15 @@ def main():
         lease = instance.acquire()
     except Timeout:
         p.exit(1, "이미 이 기기에서 Jobevent가 실행 중입니다.\n")
-    with (
-        lease,
-        ThreadingHTTPServer(("127.0.0.1", args.port), handler(service)) as server,
-    ):
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(service))
+    except OSError as e:
+        p.exit(
+            1,
+            f"127.0.0.1:{args.port}에서 실행할 수 없습니다({e.strerror}). "
+            f"`jobevent --port {args.port + 1}`처럼 다른 포트를 지정하세요.\n",
+        )
+    with lease, server:
         url = f"http://127.0.0.1:{server.server_port}"
         stop = threading.Event()
 
