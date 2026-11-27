@@ -5,6 +5,7 @@ import base64
 import json
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
@@ -325,6 +326,10 @@ def handler(service):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        # Redirected output on Windows uses the locale code page, which may lack Hangul.
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description="Jobevent 로컬 알림 스튜디오")
     p.add_argument("--no-browser", action="store_true")
     p.add_argument("--port", type=int, default=8765)

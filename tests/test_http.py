@@ -93,3 +93,18 @@ def test_busy_port_exits_with_guidance(tmp_path, monkeypatch, capsys):
             app.main()
     assert exit.value.code == 1
     assert f"--port {port + 1}" in capsys.readouterr().err
+
+
+def test_korean_output_survives_non_utf8_redirect(monkeypatch):
+    import io
+    import sys
+
+    from jobevent import app
+
+    out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "argv", ["jobevent", "--help"])
+    with pytest.raises(SystemExit):
+        app.main()
+    out.flush()
+    assert "로컬 알림 스튜디오" in out.buffer.getvalue().decode("utf-8")
