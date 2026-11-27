@@ -3,7 +3,7 @@
 **내 PC에서 내 AI 키로 돌리는, 목적별 공고 알림방 오픈소스.** 채용·인턴·동아리·공모전·해커톤처럼 받고 싶은 기회마다 알림방을 만들면, 내가 정한 요일과 시각에 Jobevent가 공고를 찾아 고른 뒤 Discord·Slack 채널로 보냅니다. 서버나 회원가입이 없고, 데이터와 키는 설치한 PC에만 저장됩니다.
 
 ```sh
-uv tool install git+https://github.com/ghdtjdwn/jobevent@v0.2.1
+uv tool install git+https://github.com/ghdtjdwn/jobevent@v0.2.2
 jobevent
 ```
 
