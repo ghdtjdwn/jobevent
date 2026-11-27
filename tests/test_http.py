@@ -108,3 +108,15 @@ def test_korean_output_survives_non_utf8_redirect(monkeypatch):
         app.main()
     out.flush()
     assert "로컬 알림 스튜디오" in out.buffer.getvalue().decode("utf-8")
+
+
+@pytest.mark.parametrize("platform, reuse", [("win32", False), ("darwin", True)])
+def test_windows_server_never_shares_a_busy_port(service, monkeypatch, platform, reuse):
+    import socket
+
+    from jobevent import app
+
+    monkeypatch.setattr("sys.platform", platform)
+    with app.Server(("127.0.0.1", 0), handler(service)) as server:
+        opt = server.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+    assert bool(opt) is reuse

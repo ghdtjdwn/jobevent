@@ -325,6 +325,13 @@ def handler(service):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        # On Windows SO_REUSEADDR lets a second process bind a port that is in use.
+        self.allow_reuse_address = sys.platform != "win32"
+        super().server_bind()
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         # Redirected output on Windows uses the locale code page, which may lack Hangul.
@@ -343,7 +350,7 @@ def main():
     except Timeout:
         p.exit(1, "이미 이 기기에서 Jobevent가 실행 중입니다.\n")
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(service))
+        server = Server(("127.0.0.1", args.port), handler(service))
     except OSError as e:
         p.exit(
             1,
