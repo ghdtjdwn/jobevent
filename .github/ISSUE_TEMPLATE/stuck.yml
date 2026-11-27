@@ -1,0 +1,44 @@
+name: 사용 중 막힘
+description: '설치, 키 발급, 웹훅 연결, 알림방 사용 중 막힌 곳을 알려 줍니다. 제목은 `막힘: <단계>` 형식으로 씁니다.'
+title: '막힘: '
+labels: [onboarding]
+body:
+  - type: markdown
+    attributes:
+      value: 실제 API 키, 웹훅 URL, 이력서, 실행 기록 원문은 붙이지 마세요. 코드를 몰라도 괜찮습니다. 어디서 멈췄는지만 알려 주시면 안내와 화면을 고칩니다.
+  - type: dropdown
+    id: step
+    attributes:
+      label: 막힌 단계
+      options:
+        - 설치 (uv, uv tool install)
+        - 실행과 화면 열기
+        - AI 키 발급과 등록
+        - 웹훅 발급과 채널 연결 확인
+        - 내 자료와 공개 링크
+        - 알림방 설정과 예약
+        - 미리보기와 발송 결과
+        - 기타
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 하려던 일과 일어난 일
+      description: 무엇을 하려다 어떻게 됐는지 편하게 씁니다.
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: 화면이나 터미널 메시지
+      description: 보인 오류 문구를 붙입니다. 키, 웹훅 URL, 개인정보는 지웁니다.
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: 환경
+      description: 운영체제, Jobevent 버전(태그), AI 제공 회사처럼 아는 것만 씁니다.
+    validations:
+      required: false
